@@ -1,7 +1,15 @@
 .data
-	player: .word 30,30,5,5 #Possui a seguinte ordem: x,y,width,height
+	player: .word 1,1,2,2 #Possui a seguinte ordem: x,y,width,height
 .text
 main:
+	#Recupera os dados da memoria	
+	lw $15,player
+	lw $16,player+4
+	lw $17,player+8
+	lw $18,player+12
+	li $10,0xff00
+	jal desenharQuadrado
+
 	#Recupera os dados da memoria	
 	lw $15,player
 	lw $16,player+4
@@ -17,7 +25,7 @@ desenharQuadrado:
 	addi $sp,$sp,-4 #tiramos o espaço de memoria
 	sw $ra, ($sp)	
 				
-	row:beq $11,$18,end_row			
+		row:beq $11,$18,end_row			
 			
 			col:beq $12,$17,end_col											
 				jal converter

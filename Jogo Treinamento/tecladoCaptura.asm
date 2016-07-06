@@ -7,7 +7,7 @@
 		
 		naoZero:beqz $13,endNaoZero	#verifica se existe algo no endereço 0xffff0000
 			#Após fazer o 'lw', o mips seta para 0 o endereço 0xffff0000
-			lw $13,4($12)	#Os numeros ascii ficam em 0xffff0004
+			lw $14,4($12)	#Os numeros ascii ficam em 0xffff0004
 			li $2,1
 			move $4,$13			
 			syscall		
