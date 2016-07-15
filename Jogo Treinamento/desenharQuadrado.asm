@@ -1,6 +1,78 @@
 .data
 	array_colisoes: .word 1,1,1,1,1,1,1,1
-	array_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
+	shape_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
+	array_player: .word #Player Right || 0-160(posição na memoria)
+						#Head				  	              
+				  		122,120,6,2,
+	              		122,122,4,2,
+	              		120,124,8,2,
+	              		#Body
+	              		120,126,10,4,
+	              		122,128,8,4,
+	              		#Gun
+	              		134,126,2,6,
+	              		130,128,4,2,
+	              		#Legs Left
+	              		122,132,4,2,
+	              		120,134,4,2,
+	              		#Legs Right
+	              		128,132,4,2,
+	              		130,134,4,2,
+	              		
+	              		#Player Left || 176-366(posição na memoria)
+	              		#Head				  	              
+				  		128,120,6,2,
+	              		130,122,4,2,
+	              		128,124,8,2,
+	              		#Body
+	              		126,126,10,4,
+	              		126,128,8,4,
+	              		#Gun
+	              		120,126,2,6,
+	              		122,128,4,2,
+	              		#Legs Left
+	              		130,132,4,2,
+	              		132,134,4,2,
+	              		#Legs Right
+	              		124,132,4,2,
+	              		122,134,4,2,
+	              		
+	              		#Player up || 352-512(posição na memoria)
+	              		#Head				  	              
+				  	    134,128,2,6,
+	              	    132,130,2,4,
+	              	    130,128,2,8,
+	              	    #Body
+	              	    126,126,4,10,
+	              	    124,126,2,8,
+	              	    #Gun
+	              		124,120,6,2,
+	              		126,122,2,4,
+	              		#Legs Left
+	              		120,122,2,4,
+	              		122,124,2,4,
+	              		#Legs Right
+	              		120,132,2,4,
+	              		122,130,2,4,	 
+	              		             				              			
+	              		#Player Down || 528-688(posição na memoria)
+						#Head				  	              
+				  	    120,122,2,6,
+	              	    122,122,2,4,
+	              	    124,120,2,8,
+	              	    #Body
+	              	    126,120,4,10,
+	              	    130,122,2,8,
+	              	    #Gun
+	              		126,134,6,2,
+	              		128,130,2,4,
+	              		#Legs Left
+	              		134,130,2,4,
+	              		132,128,2,4,
+	              		#Legs Right
+	              		134,120,2,4,
+	              		132,122,2,4
+	              		
 	array_cenario: .word #Bordas do jogo
 						 4,32,248,4,  #Barra Superior
 	                     4,32,8,120,  #Barra da Esquerda
@@ -101,10 +173,14 @@ desenharPixel:
 		sw $10,0($9)	    	    
 	jr $ra
 
-limparBackground:
+limparBackgroundPlayer:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
-
+		
+		lw $15,shape_player
+		lw $16,shape_player+4
+		lw $17,shape_player+8
+		lw $18,shape_player+12
 		li $10,0x0000 #cor do quadrado	
 		jal quadrado
 		
@@ -135,25 +211,37 @@ player:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)	
 		
-		lw $15,array_player
-		lw $16,array_player+4
-		lw $17,array_player+8
-		lw $18,array_player+12		
-		jal limparBackground	#limpar o back do player
+		#Recuperar a forma do player
+		lw $15,shape_player
+		lw $16,shape_player+4
+		lw $17,shape_player+8
+		lw $18,shape_player+12
 		
 		jal movePlayer
-		
-		#Recupera os dados da memoria	
-		lw $15,array_player
-		lw $16,array_player+4
-		lw $17,array_player+8
-		lw $18,array_player+12		
-		li $10,0x00ff #cor do quadrado
-		jal quadrado
-		
+				
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
+	jr $ra
+
+desenharPlayer:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)	
+		
+		montar:bgt $8,$25,sairmontar	
+			lw $15,array_player($8)
+			lw $16,array_player+4($8)
+			lw $17,array_player+8($8)
+			lw $18,array_player+12($8)			
+			jal quadrado
+		
+			addi $8,$8,16
+			j montar
+		sairmontar:
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4	
 	jr $ra
 
 movePlayer:
@@ -167,10 +255,21 @@ movePlayer:
 		a:bne $20,97,naoA
 		    addi $15,$15,-1	#Ajuste. Não detecta ao encostar no elemento						
 			jal colidiuCenario									
-			beq $14,1,naoA				
+			beq $14,1,naoA
+				#apaga o desenho
+				jal limparBackgroundPlayer
+				
+				#Atualiza o desenho
 				li $14,-4
 				jal moveHorizontal
-		naoA:
+				
+				#Redesenha na nova posição
+				li $8,176
+				li $25,336
+				li $10,0xff00	#Cor para do personagem
+				jal desenharPlayer								
+		naoA: li $8,0 #Reseta o contador
+		      li $25,0
 	
 		#Verifica se apertou 'd' no teclado
 		d:bne $20,100,naoD	
@@ -178,27 +277,60 @@ movePlayer:
 			jal colidiuCenario
 			add $26,$14,$0			
 			beq $14,1,naoD
+				#apaga o desenho
+				jal limparBackgroundPlayer
+				
+				#Atualiza o desenho
 				li $14,4
 				jal moveHorizontal
-		naoD:
+				
+				#Redesenha na nova posição
+				li $8,0
+				li $25,160
+				li $10,0xff00	#Cor para do personagem
+				jal desenharPlayer
+		naoD: li $8,0 #Reseta o contador
+		      li $25,0
 		
 		#Verifica se apertou 'w' no teclado
 		w:bne $20,119,naoW
 			addi $16,$16,-1	#Ajuste. Não detecta ao encostar no elemento							
 			jal colidiuCenario
-			beq $14,1,naoW	
-				li $14,-4
+			beq $14,1,naoW							
+				#apaga o desenho
+				jal limparBackgroundPlayer
+				
+				#Atualiza o desenho
+				li $14,-4				
 				jal moveVertical
-		naoW:
+				
+				#Redesenha na nova posição
+				li $8,352
+				li $25,512
+				li $10,0xff00	#Cor para do personagem
+				jal desenharPlayer
+		naoW: li $8,0 #Reseta o contador
+		      li $25,0			
 		
 		#Verifica se apertou 's' no teclado
 		s:bne $20,115,naoS
 			addi $16,$16,1	#Ajuste. Não detecta ao encostar no elemento							
 			jal colidiuCenario
-			beq $14,1,naoS
+			beq $14,1,naoS				
+				#apaga o desenho
+				jal limparBackgroundPlayer
+				
+				#Atualiza o desenho
 				li $14,4
 				jal moveVertical
-		naoS:
+				
+				#Redesenha na nova posição
+				li $8,528
+				li $25,688
+				li $10,0xff00	#Cor para do personagem
+				jal desenharPlayer							
+		naoS: li $8,0 #Reseta o contador
+		      li $25,0
 			
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
@@ -207,16 +339,38 @@ movePlayer:
 	
 #Faz a movimentação para Left ou Right, O parametro deve ser passado no reg $14
 moveHorizontal:
-		lw $15,array_player
+		#Atualiza a forma do player
+		lw $15,shape_player
 		add $15,$15,$14
-		sw $15,array_player
+		sw $15,shape_player
+		
+		li $8,0	#garante que o reg esteja em 0
+		montarMoverHorizontal:bgt $8,688,sairMontarMoverHorizontal	
+				lw $15,array_player($8)
+				add $15,$15,$14
+				sw $15,array_player($8)											
+				
+				addi $8,$8,16
+				j montarMoverHorizontal
+			sairMontarMoverHorizontal:		
 	jr $ra	
 	
 #Faz a movimentação para Up ou Down, O parametro deve ser passado no reg $14
-moveVertical:		
-		lw $16,array_player+4
+moveVertical:
+		#Atualiza a forma do player
+		lw $16,shape_player+4
 		add $16,$16,$14
-		sw $16,array_player+4	
+		sw $16,shape_player+4
+		
+		li $8,0	#garante que o reg esteja em 0
+		montarMoverVertical:bgt $8,688,sairMontarMoverVertical	
+				lw $16,array_player+4($8)
+				add $16,$16,$14
+				sw $16,array_player+4($8)											
+				
+				addi $8,$8,16
+				j montarMoverVertical
+			sairMontarMoverVertical:					
 	jr $ra	
 
 #Verifica se colidiu com o cenario. Espera que os reg [15-18] estejam preenchidos com os dados corretos
