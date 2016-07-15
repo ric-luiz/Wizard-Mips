@@ -1,4 +1,5 @@
 .data
+	array_colisoes: .word 1,1,1,1,1,1,1,1
 	array_player: .word 30,30,4,4 #Possui a seguinte ordem: x,y,width,height
 	array_cenario: .word #Bordas do jogo
 						 1,8,62,1,  #Barra Superior
@@ -159,30 +160,46 @@ movePlayer:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		
+		#verifica se o player está batendo em algo
+		add $14,$0,$0	#Garante que o reg esteja inicialmente com 0		
+		
 		#Verifica se apertou 'a' no teclado
 		a:bne $20,97,naoA
-			li $14,-1
-			jal moveHorizontal
+		    addi $15,$15,-1	#Ajuste. Não detecta ao encostar no elemento						
+			jal colidiuCenario									
+			beq $14,1,naoA				
+				li $14,-1
+				jal moveHorizontal
 		naoA:
 	
 		#Verifica se apertou 'd' no teclado
-		d:bne $20,100,naoD
-			li $14,1
-			jal moveHorizontal
+		d:bne $20,100,naoD	
+			addi $15,$15,1	#Ajuste. Não detecta ao encostar no elemento							
+			jal colidiuCenario
+			add $26,$14,$0			
+			beq $14,1,naoD
+				li $14,1
+				jal moveHorizontal
 		naoD:
 		
 		#Verifica se apertou 'w' no teclado
 		w:bne $20,119,naoW
-			li $14,-1
-			jal moveVertical
+			addi $16,$16,-1	#Ajuste. Não detecta ao encostar no elemento							
+			jal colidiuCenario
+			beq $14,1,naoW	
+				li $14,-1
+				jal moveVertical
 		naoW:
 		
 		#Verifica se apertou 's' no teclado
 		s:bne $20,115,naoS
-			li $14,1
-			jal moveVertical
+			addi $16,$16,1	#Ajuste. Não detecta ao encostar no elemento							
+			jal colidiuCenario
+			beq $14,1,naoS
+				li $14,1
+				jal moveVertical
 		naoS:
-	
+			
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
@@ -201,13 +218,89 @@ moveVertical:
 		add $16,$16,$14
 		sw $16,array_player+4	
 	jr $ra	
+
+#Verifica se colidiu com o cenario. Espera que os reg [15-18] estejam preenchidos com os dados corretos
+colidiuCenario:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		jal alimentarArrayColisaoA #Insere no array de colisões os elementos do quadrado a
+		
+		#Pega as posições dos quadrados do cenario
+		colisaoCenario: bgt $8,560,sairColisaoCenario
+			#Recupera os dados da memoria	
+			lw $21,array_cenario($8)
+			lw $22,array_cenario+4($8)
+			lw $23,array_cenario+8($8)
+			lw $24,array_cenario+12($8)		
+				
+			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
+			jal colidiu	#verifica se colidiu com os elementos do cenario
+			add $26,$14,$0
+			beq $14,1,sairColisaoCenario
+									
+			addi $8,$8,16
+			j colisaoCenario
+		sairColisaoCenario:				
+		
+		add $8,$0,$0 #Reset no contador
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra			
+
+#Faz a verificação da colisão entre os quadrados			
+colidiu:		
+			lw $21,array_colisoes#esquerda Quadrado A
+			lw $22,array_colisoes+24#direita Quadrado B
+			add $21,$21,1	#Ajuste. Não detecta ao encostar no elemento
+			bgt $21,$22,sairVerificarColisao
 			
+			lw $21,array_colisoes+8#direita Quadrado A
+			lw $22,array_colisoes+16#esquerda Quadrado B
+			add $21,$21,-1	#Ajuste. Não detecta ao encostar no elemento
+			blt $21,$22,sairVerificarColisao
+			
+			lw $21,array_colisoes+4#Cima Quadrado A
+			lw $22,array_colisoes+28#Baixo Quadrado B
+			add $21,$21,1	#Ajuste. Não detecta ao encostar no elemento
+			bgt $21,$22,sairVerificarColisao
+			
+			lw $21,array_colisoes+12#Baixo Quadrado A
+			lw $22,array_colisoes+20#Cima Quadrado B
+			add $21,$21,-1	#Ajuste. Não detecta ao encostar no elemento
+			blt $21,$22,sairVerificarColisao
+			
+			bateu: addi $14,$0,1 #caso tenha alguma colisão seta para 1
+		sairVerificarColisao:
+		
+	jr $ra
+
+#Alimenta os 4 primeiros bytes do array de colisão com as posições dos lados dos quadrados	
+alimentarArrayColisaoA:
+		sw $15,array_colisoes
+		sw $16,array_colisoes+4
+		add $21,$17,$15	#posisão da largura
+		add $22,$18,$16 #posisão da altura
+		sw $21,array_colisoes+8
+		sw $22,array_colisoes+12
+	jr $ra
+	
+#Alimenta os 4 ultimos bytes do array de colisão com as posições dos lados dos quadrados
+alimentarArrayColisaob:
+		sw $21,array_colisoes+16
+		sw $22,array_colisoes+20
+		add $21,$21,$23	#posisão da largura
+		add $22,$22,$24 #posisão da altura
+		sw $21,array_colisoes+24
+		sw $22,array_colisoes+28
+	jr $ra
 #Inicia o Cenario do Jogo	
 iniciarJogo:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		jal cenario
-		#jal player
+		jal player
 		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
