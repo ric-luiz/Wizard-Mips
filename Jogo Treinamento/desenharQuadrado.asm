@@ -1,48 +1,48 @@
 .data
 	array_colisoes: .word 1,1,1,1,1,1,1,1
-	array_player: .word 30,30,4,4 #Possui a seguinte ordem: x,y,width,height
+	array_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
 	array_cenario: .word #Bordas do jogo
-						 1,8,62,1,  #Barra Superior
-	                     1,8,2,30,  #Barra da Esquerda
-	                     1,38,62,1, #Barra Inferior
-	                     61,8,2,30, #Barra da Direita
+						 4,32,248,4,  #Barra Superior
+	                     4,32,8,120,  #Barra da Esquerda
+	                     4,152,248,4, #Barra Inferior
+	                     244,32,8,120, #Barra da Direita
 	                     #1º linha de barras
-	                     7,13,11,1,
-	                     22,13,2,6,
-	                     28,13,8,1,
-	                     40,13,2,6,
-	                     46,13,11,1,
+	                     28,52,44,4,
+	                     88,52,8,24,
+	                     112,52,32,4,
+	                     160,52,8,24,
+	                     184,52,44,4,
 	                     #2º linha de barras
-	                     7,18,6,1,
-	                     17,18,5,1,
-	                     28,18,8,1,
-	                     42,18,5,1,
-	                     51,18,6,1,
+	                     28,72,24,4,
+	                     68,72,20,4,
+	                     112,72,32,4,
+	                     168,72,20,4,
+	                     204,72,24,4,
 	                     #3º linha de barras
-	                     3,23,4,1,
-	                     11,23,2,6,
-	                     17,19,2,5,
-	                     23,23,7,1,
-	                     34,23,7,1,
-	                     45,18,2,6,
-	                     51,23,2,6,
-	                     57,23,4,1,
+	                     12,92,16,4,
+	                     44,92,8,24,
+	                     68,76,8,20,
+	                     92,92,28,4,
+	                     136,92,28,4,
+	                     180,72,8,24,
+	                     204,92,8,24,
+	                     228,92,16,4,
 	                     #4º linha de barras
-	                     7,28,4,1,
-	                     17,28,2,6,
-	                     23,24,2,5,	                     
-	                     29,28,1,6,
-	                     34,28,1,6,
-	                     39,24,2,6,
-	                     45,28,2,6,
-	                     53,28,4,1,
+	                     28,112,16,4,
+	                     68,112,8,24,
+	                     92,96,8,24,	                     
+	                     116,112,4,24,
+	                     136,112,4,24,
+	                     156,96,8,24,
+	                     180,112,8,24,
+	                     212,112,16,4,
 	                     #5º linha de barras
-	                     7,29,2,5,
-	                     13,33,4,1,
-	                     23,34,2,4,
-	                     39,34,2,4,
-	                     47,33,4,1,
-	                     55,29,2,5,
+	                     28,116,8,20,
+	                     52,132,16,4,
+	                     92,136,8,16,
+	                     156,136,8,16,
+	                     188,132,16,4,
+	                     220,116,8,20
 .text
 
 main:
@@ -89,7 +89,7 @@ jr $ra
 # x = $15
 # y = $16
 coordenadas: 								
-		sll $14,$16,8
+		sll $14,$16,10
 		sll $13,$15,2
 		add $14,$14,$13							
 	jr $ra
@@ -168,7 +168,7 @@ movePlayer:
 		    addi $15,$15,-1	#Ajuste. Não detecta ao encostar no elemento						
 			jal colidiuCenario									
 			beq $14,1,naoA				
-				li $14,-1
+				li $14,-4
 				jal moveHorizontal
 		naoA:
 	
@@ -178,7 +178,7 @@ movePlayer:
 			jal colidiuCenario
 			add $26,$14,$0			
 			beq $14,1,naoD
-				li $14,1
+				li $14,4
 				jal moveHorizontal
 		naoD:
 		
@@ -187,7 +187,7 @@ movePlayer:
 			addi $16,$16,-1	#Ajuste. Não detecta ao encostar no elemento							
 			jal colidiuCenario
 			beq $14,1,naoW	
-				li $14,-1
+				li $14,-4
 				jal moveVertical
 		naoW:
 		
@@ -196,7 +196,7 @@ movePlayer:
 			addi $16,$16,1	#Ajuste. Não detecta ao encostar no elemento							
 			jal colidiuCenario
 			beq $14,1,naoS
-				li $14,1
+				li $14,4
 				jal moveVertical
 		naoS:
 			

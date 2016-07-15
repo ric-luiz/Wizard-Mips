@@ -1,29 +1,80 @@
 .data
 	player_right: .word #Head				  	              
-				  42,36,6,2,
-	              42,38,4,2,
-	              40,40,8,2,
-	              #Body
-	              40,42,10,4,
-	              42,44,8,4,
-	              #Gun
-	              54,42,2,6,
-	              50,44,4,2,
-	              #Legs Left
-	              42,48,4,2,
-	              40,50,4,2,
-	              #Legs Right
-	              48,48,4,2,
-	              50,50,4,2
+				  		42,36,6,2,
+	              		42,38,4,2,
+	              		40,40,8,2,
+	              		#Body
+	              		40,42,10,4,
+	              		42,44,8,4,
+	              		#Gun
+	              		54,42,2,6,
+	              		50,44,4,2,
+	              		#Legs Left
+	              		42,48,4,2,
+	              		40,50,4,2,
+	              		#Legs Right
+	              		48,48,4,2,
+	              		50,50,4,2,
+	              		
+	player_left:  .word #Head				  	              
+				  		48,36,6,2,
+	              		50,38,4,2,
+	              		48,40,8,2,
+	              		#Body
+	              		46,42,10,4,
+	              		46,44,8,4,
+	              		#Gun
+	              		40,42,2,6,
+	              		42,44,4,2,
+	              		#Legs Left
+	              		50,48,4,2,
+	              		52,50,4,2,
+	              		#Legs Right
+	              		44,48,4,2,
+	              		42,50,4,2,
+	              		
+	player_up:	  .word #Head				  	              
+				  	    54,44,2,6,
+	              	    52,46,2,4,
+	              	    50,44,2,8,
+	              	    #Body
+	              	    46,42,4,10,
+	              	    44,42,2,8,
+	              	    #Gun
+	              		44,36,6,2,
+	              		46,38,2,4,
+	              		#Legs Left
+	              		40,38,2,4,
+	              		42,40,2,4,
+	              		#Legs Right
+	              		40,48,2,4,
+	              		42,46,2,4,
+	              		
+	player_down:  .word #Head				  	              
+				  	    40,38,2,6,
+	              	    42,38,2,4,
+	              	    44,36,2,8,
+	              	    #Body
+	              	    46,36,4,10,
+	              	    50,38,2,8,
+	              	    #Gun
+	              		46,50,6,2,
+	              		48,46,2,4,
+	              		#Legs Left
+	              		54,46,2,4,
+	              		52,44,2,4,
+	              		#Legs Right
+	              		54,36,2,4,
+	              		52,38,2,4,
 		
 .text
 main:
 	#Recupera os dados da memoria
-	montar:bgt $8,256,sairmontar	
-		lw $15,player_right($8)
-		lw $16,player_right+4($8)
-		lw $17,player_right+8($8)
-		lw $18,player_right+12($8)
+	montar:bgt $8,160,sairmontar	
+		lw $15,player_down($8)
+		lw $16,player_down+4($8)
+		lw $17,player_down+8($8)
+		lw $18,player_down+12($8)
 		li $10,0xff00
 		jal desenharQuadrado
 		
