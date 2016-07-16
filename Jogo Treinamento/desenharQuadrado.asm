@@ -129,7 +129,7 @@ main:
 		jal lerTeclado	#pooling do teclado									 
 		
 		addi $27,$27,1	#incrementa mais 1 no time
-		blt $27,1000,naoResetTempo								
+		blt $27,500,naoResetTempo								
 			li $27,0 #reset time
 		naoResetTempo:
 	j update		
@@ -416,15 +416,6 @@ tiroJogador:
 				lw $15,array_player+80 #posição x da Gun do player
 				lw $16,array_player+84 #posição y da Gun do player
 				
-				add $4,$16,$0
-				li $2,1
-				syscall
-				
-				#Imprime linha
-				li $v0,4
-				la $a0,newLine
-				syscall
-				
 				#Vamos montar o tiro para guarda-lo no array de tiros
 				addi $15,$15,8
 				addi $16,$16,1
@@ -438,17 +429,8 @@ tiroJogador:
 				lw $15,array_player+256 #posição x da Gun do player
 				lw $16,array_player+260 #posição y da Gun do player
 				
-				add $4,$16,$0
-				li $2,1
-				syscall
-				
-				#Imprime linha
-				li $v0,4
-				la $a0,newLine
-				syscall
-				
 				#Vamos montar o tiro para guarda-lo no array de tiros
-				addi $15,$15,-10
+				addi $15,$15,-8
 				addi $16,$16,1
 				addi $17,$0,6
 				addi $18,$0,2
@@ -473,7 +455,7 @@ tiroJogador:
 				lw $16,array_player+612 #posição y da Gun do player
 				#Vamos montar o tiro para guarda-lo no array de tiros
 				addi $15,$15,1
-				addi $16,$16,10
+				addi $16,$16,8
 				addi $17,$0,2
 				addi $18,$0,6
 				
@@ -521,14 +503,19 @@ atualizarTiros:
 		bne $27,0,sairAtualizarArrayTiros #garante que o tiro seja atualizado no tempo certo
 		#Garante que comça de 0
 		li $26,0				
-		atualizarArrayTiros:bgt $26,384,sairAtualizarArrayTiros
+		atualizarArrayTiros:bgt $26,384,sairAtualizarArrayTiros							
 			lw $12,array_tiros($26)
-			sw $26, ($sp)			
-			beq $12,1,naoTemTiro								
+			sw $26, ($sp)									
+			
+			beq $12,1,naoTemTiro																												
+				jal colisaoTiro
+				bne $15,1,semColisao #caso tenha ocorrido uma colisão dispensamos o resto
+					j naoTemTiro
+				semColisao:
 				
 				jal limparBackgroundTiro
 				
-				jal moverTiro
+				jal moverTiro								
 				
 				lw $26, ($sp)												
 				jal desenharTiro
@@ -570,15 +557,15 @@ limparBackgroundTiro:
 #Move todos os tiros atualmente no array de tiros
 moverTiro:	
 			lw $15,array_tiros($26)
-			lw $16,array_tiros+4($26)	
-			lw $17,array_tiros+16($26)
+			lw $16,array_tiros+4($26)				
+			lw $17,array_tiros+16($26)			
 			
-			bne $17,1,naoMoveRigth
+			bne $17,1,naoMoveRigth								
 				addi $15,$15,4
-				sw $15,array_tiros($26)
+				sw $15,array_tiros($26)				
 			naoMoveRigth:
 			
-			bne $17,2,naoMoveLeft
+			bne $17,2,naoMoveLeft				
 				addi $15,$15,-4
 				sw $15,array_tiros($26)
 			naoMoveLeft:
@@ -605,6 +592,45 @@ desenharTiro:
 		lw $18,array_tiros+12($26)
 		li $10,0x00ff #cor do quadrado	
 		jal quadrado
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+	
+destroirTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		jal limparBackgroundTiro
+		
+		#vamos liberar o espaço no array para um novo tiro
+		li $15,1
+		sw $15,array_tiros($26)
+		sw $15,array_tiros+4($26)
+		sw $15,array_tiros+8($26)
+		sw $15,array_tiros+12($26)
+		sw $15,array_tiros+16($26)
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+	
+colisaoTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+	
+		lw $15,array_tiros($26)
+		lw $16,array_tiros+4($26)
+		lw $17,array_tiros+8($26)
+		lw $18,array_tiros+12($26)
+		
+		jal colidiuCenarioTiro
+		
+		bne $14,1,semColisaoTiro
+			jal destroirTiro
+		semColisaoTiro:
 		
 		#Recupera e libera a memoria alocada
 		lw $ra, ($sp)
@@ -638,8 +664,7 @@ colidiuCenario:
 			lw $24,array_cenario+12($8)		
 				
 			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
-			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario
-			add $26,$14,$0
+			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario			
 			beq $14,1,sairColisaoCenario
 									
 			addi $8,$8,16
@@ -677,6 +702,59 @@ VerificarColidiu:
 			bateu: addi $14,$0,1 #caso tenha alguma colisão seta para 1
 		sairVerificarColisao:
 		
+	jr $ra
+
+#Especifico para detectar colisão entre o tiro e o Cenario
+colidiuCenarioTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		jal alimentarArrayColisaoA #Insere no array de colisões os elementos do quadrado a
+		
+		#Pega as posições dos quadrados do cenario
+		colisaoCenarioTiro: bgt $8,560,sairColisaoCenarioTiro
+			#Recupera os dados da memoria	
+			lw $21,array_cenario($8)
+			lw $22,array_cenario+4($8)
+			lw $23,array_cenario+8($8)
+			lw $24,array_cenario+12($8)		
+				
+			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
+			jal VerificarColidiuTiro	#verifica se colidiu com os elementos do cenario			
+			beq $14,1,sairColisaoCenarioTiro
+									
+			addi $8,$8,16
+			j colisaoCenarioTiro
+		sairColisaoCenarioTiro:				
+		
+		add $8,$0,$0 #Reset no contador
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+#especifico para colisão entre algum elemento e o tiro
+VerificarColidiuTiro:
+			lw $21,array_colisoes#esquerda Quadrado A
+			lw $22,array_colisoes+24#direita Quadrado B						
+			addi $21,$21,-2
+			bgt $21,$22,sairVerificarColisaoTiro
+			
+			lw $21,array_colisoes+8#direita Quadrado A
+			lw $22,array_colisoes+16#esquerda Quadrado B		
+			blt $21,$22,sairVerificarColisaoTiro
+			
+			lw $21,array_colisoes+4#Cima Quadrado A
+			lw $22,array_colisoes+28#Baixo Quadrado B			
+			bgt $21,$22,sairVerificarColisaoTiro
+			
+			lw $21,array_colisoes+12#Baixo Quadrado A
+			lw $22,array_colisoes+20#Cima Quadrado B			
+			addi $21,$21,2
+			blt $21,$22,sairVerificarColisaoTiro
+			
+			addi $14,$0,1 #caso tenha alguma colisão seta para 1
+		sairVerificarColisaoTiro:
 	jr $ra
 
 #Alimenta os 4 primeiros bytes do array de colisão com as posições dos lados dos quadrados	
