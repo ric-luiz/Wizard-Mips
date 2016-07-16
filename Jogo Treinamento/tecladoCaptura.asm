@@ -9,7 +9,7 @@
 			#Após fazer o 'lw', o mips seta para 0 o endereço 0xffff0000
 			lw $14,4($12)	#Os numeros ascii ficam em 0xffff0004
 			li $2,1
-			move $4,$13			
+			move $4,$14			
 			syscall		
 		endNaoZero:
 	j update

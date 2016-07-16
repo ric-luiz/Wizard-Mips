@@ -1,5 +1,8 @@
 .data
-	array_colisoes: .word 1,1,1,1,1,1,1,1
+	newLine: .asciiz " "
+	array_tiros: .word 1:100	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)
+	array_colisoes: .word 1:8	
+	posicao_player: .word 3	# 1-right,2-left,3-up,4-down
 	shape_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
 	array_player: .word #Player Right || 0-160(posição na memoria)
 						#Head				  	              
@@ -118,11 +121,17 @@
 .text
 
 main:
-	jal iniciarJogo			
+	jal iniciarJogo	
+	li $27,0	#time		
 	update:	#aqui temos o loop de animação									
-			
+		jal atualizarTiros
+				
 		jal lerTeclado	#pooling do teclado									 
-						
+		
+		addi $27,$27,1	#incrementa mais 1 no time
+		blt $27,1000,naoResetTempo								
+			li $27,0 #reset time
+		naoResetTempo:
 	j update		
 end: li $2,10
      syscall 
@@ -131,7 +140,10 @@ end: li $2,10
 quadrado:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)	
-						
+		#Gaante que começõu do 0
+		li $12,0
+		li $11,0
+										
 		row:beq $11,$18,end_row						
 			col:beq $12,$17,end_col											
 				jal coordenadas
@@ -211,6 +223,8 @@ player:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)	
 		
+		jal tiroJogador
+		
 		#Recuperar a forma do player
 		lw $15,shape_player
 		lw $16,shape_player+4
@@ -239,6 +253,9 @@ desenharPlayer:
 			j montar
 		sairmontar:
 		
+		li $8,0 #Reseta o contador
+		li $25,0
+		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4	
@@ -254,8 +271,12 @@ movePlayer:
 		#Verifica se apertou 'a' no teclado
 		a:bne $20,97,naoA
 		    addi $15,$15,-1	#Ajuste. Não detecta ao encostar no elemento						
-			jal colidiuCenario									
+			jal colisaoGeral									
 			beq $14,1,naoA
+				#Seta a posição do jogador
+				li $15,2 #esquerda
+				sw $15,posicao_player
+				
 				#apaga o desenho
 				jal limparBackgroundPlayer
 				
@@ -268,15 +289,18 @@ movePlayer:
 				li $25,336
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer								
-		naoA: li $8,0 #Reseta o contador
-		      li $25,0
+		naoA:
 	
 		#Verifica se apertou 'd' no teclado
 		d:bne $20,100,naoD	
 			addi $15,$15,1	#Ajuste. Não detecta ao encostar no elemento							
-			jal colidiuCenario
+			jal colisaoGeral
 			add $26,$14,$0			
 			beq $14,1,naoD
+				#Seta a posição do jogador
+				li $15,1 #direita
+				sw $15,posicao_player
+			
 				#apaga o desenho
 				jal limparBackgroundPlayer
 				
@@ -289,14 +313,17 @@ movePlayer:
 				li $25,160
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer
-		naoD: li $8,0 #Reseta o contador
-		      li $25,0
+		naoD:
 		
 		#Verifica se apertou 'w' no teclado
 		w:bne $20,119,naoW
 			addi $16,$16,-1	#Ajuste. Não detecta ao encostar no elemento							
-			jal colidiuCenario
-			beq $14,1,naoW							
+			jal colisaoGeral
+			beq $14,1,naoW
+				#Seta a posição do jogador
+				li $15,3 #cima
+				sw $15,posicao_player
+																	
 				#apaga o desenho
 				jal limparBackgroundPlayer
 				
@@ -309,14 +336,17 @@ movePlayer:
 				li $25,512
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer
-		naoW: li $8,0 #Reseta o contador
-		      li $25,0			
+		naoW:		
 		
 		#Verifica se apertou 's' no teclado
 		s:bne $20,115,naoS
 			addi $16,$16,1	#Ajuste. Não detecta ao encostar no elemento							
-			jal colidiuCenario
-			beq $14,1,naoS				
+			jal colisaoGeral
+			beq $14,1,naoS
+				#Seta a posição do jogador
+				li $15,4 #baixo
+				sw $15,posicao_player
+											
 				#apaga o desenho
 				jal limparBackgroundPlayer
 				
@@ -329,8 +359,7 @@ movePlayer:
 				li $25,688
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer							
-		naoS: li $8,0 #Reseta o contador
-		      li $25,0
+		naoS:
 			
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
@@ -346,6 +375,7 @@ moveHorizontal:
 		
 		li $8,0	#garante que o reg esteja em 0
 		montarMoverHorizontal:bgt $8,688,sairMontarMoverHorizontal	
+				
 				lw $15,array_player($8)
 				add $15,$15,$14
 				sw $15,array_player($8)											
@@ -364,6 +394,7 @@ moveVertical:
 		
 		li $8,0	#garante que o reg esteja em 0
 		montarMoverVertical:bgt $8,688,sairMontarMoverVertical	
+				
 				lw $16,array_player+4($8)
 				add $16,$16,$14
 				sw $16,array_player+4($8)											
@@ -372,6 +403,224 @@ moveVertical:
 				j montarMoverVertical
 			sairMontarMoverVertical:					
 	jr $ra	
+
+tiroJogador:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+
+		#Verifica se apertou 'space' no teclado
+		space:bne $20,32,naoSpace
+			lw $14,posicao_player
+			
+			bne $14,1,naoRigth
+				lw $15,array_player+80 #posição x da Gun do player
+				lw $16,array_player+84 #posição y da Gun do player
+				
+				add $4,$16,$0
+				li $2,1
+				syscall
+				
+				#Imprime linha
+				li $v0,4
+				la $a0,newLine
+				syscall
+				
+				#Vamos montar o tiro para guarda-lo no array de tiros
+				addi $15,$15,8
+				addi $16,$16,1
+				addi $17,$0,6
+				addi $18,$0,2								
+				
+				jal alimentarArrayTiros
+			naoRigth:
+			
+			bne $14,2,naoLeft
+				lw $15,array_player+256 #posição x da Gun do player
+				lw $16,array_player+260 #posição y da Gun do player
+				
+				add $4,$16,$0
+				li $2,1
+				syscall
+				
+				#Imprime linha
+				li $v0,4
+				la $a0,newLine
+				syscall
+				
+				#Vamos montar o tiro para guarda-lo no array de tiros
+				addi $15,$15,-10
+				addi $16,$16,1
+				addi $17,$0,6
+				addi $18,$0,2
+												
+				jal alimentarArrayTiros
+			naoLeft:
+			
+			bne $14,3,naoUp
+				lw $15,array_player+432 #posição x da Gun do player
+				lw $16,array_player+436 #posição y da Gun do player
+				#Vamos montar o tiro para guarda-lo no array de tiros
+				addi $15,$15,1
+				addi $16,$16,-8
+				addi $17,$0,2
+				addi $18,$0,6
+				
+				jal alimentarArrayTiros
+			naoUp:
+			
+			bne $14,4,naoDown
+				lw $15,array_player+608 #posição x da Gun do player
+				lw $16,array_player+612 #posição y da Gun do player
+				#Vamos montar o tiro para guarda-lo no array de tiros
+				addi $15,$15,1
+				addi $16,$16,10
+				addi $17,$0,2
+				addi $18,$0,6
+				
+				jal alimentarArrayTiros
+				
+			naoDown:
+		naoSpace:
+		
+		#Recupera e devolve o espaço da memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+alimentarArrayTiros:
+		#Garante que comça de 0
+		li $11,0
+		arrayTiros:bgt $11,384,sairArrayTiros
+			lw $12,array_tiros($11)
+																
+			bne $12,1,jaTemTiro
+				#Armazena no array de tiros em um local não reservado.
+				sw $15,array_tiros($11)
+				sw $16,array_tiros+4($11)
+				sw $17,array_tiros+8($11)
+				sw $18,array_tiros+12($11)
+				sw $14,array_tiros+16($11)
+												
+				j sairArrayTiros
+			jaTemTiro:						
+			
+			addi $11,$11,20
+			j arrayTiros
+		sairArrayTiros:		
+		
+		#Reset nos contadores
+		li $11,0
+		li $12,0
+	jr $ra
+
+atualizarTiros:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4	#tiramos novamente para usar o reg 11 sem perder dados		
+		bne $27,0,sairAtualizarArrayTiros #garante que o tiro seja atualizado no tempo certo
+		#Garante que comça de 0
+		li $26,0				
+		atualizarArrayTiros:bgt $26,384,sairAtualizarArrayTiros
+			lw $12,array_tiros($26)
+			sw $26, ($sp)			
+			beq $12,1,naoTemTiro								
+				
+				jal limparBackgroundTiro
+				
+				jal moverTiro
+				
+				lw $26, ($sp)												
+				jal desenharTiro
+			naoTemTiro:						
+			
+			
+			lw $26, ($sp)
+			addi $26,$26,20
+			j atualizarArrayTiros
+		sairAtualizarArrayTiros:										
+		
+		#Reset nos contadores
+		li $26,0
+		li $12,0
+		addi $sp,$sp,4 #Devolvemos a memoria usado
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+#usado para limpar o Back do tiro na movimentação dele
+limparBackgroundTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+
+		lw $15,array_tiros($26)
+		lw $16,array_tiros+4($26)
+		lw $17,array_tiros+8($26)
+		lw $18,array_tiros+12($26)
+		li $10,0x0000 #cor do quadrado	
+		jal quadrado
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+#Move todos os tiros atualmente no array de tiros
+moverTiro:	
+			lw $15,array_tiros($26)
+			lw $16,array_tiros+4($26)	
+			lw $17,array_tiros+16($26)
+			
+			bne $17,1,naoMoveRigth
+				addi $15,$15,4
+				sw $15,array_tiros($26)
+			naoMoveRigth:
+			
+			bne $17,2,naoMoveLeft
+				addi $15,$15,-4
+				sw $15,array_tiros($26)
+			naoMoveLeft:
+			
+			bne $17,3,naoMoveUp			    
+				addi $16,$16,-4
+				sw $16,array_tiros+4($26)
+			naoMoveUp:
+			
+			bne $17,4,naoMoveDown
+				addi $16,$16,4
+				sw $16,array_tiros+4($26)
+			naoMoveDown:
+			
+	jr $ra
+
+desenharTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+
+		lw $15,array_tiros($26)
+		lw $16,array_tiros+4($26)
+		lw $17,array_tiros+8($26)
+		lw $18,array_tiros+12($26)
+		li $10,0x00ff #cor do quadrado	
+		jal quadrado
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+colisaoGeral:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		jal colidiuCenario
+		
+		#Recupera e libera a memoria alocada
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
 
 #Verifica se colidiu com o cenario. Espera que os reg [15-18] estejam preenchidos com os dados corretos
 colidiuCenario:
@@ -389,7 +638,7 @@ colidiuCenario:
 			lw $24,array_cenario+12($8)		
 				
 			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
-			jal colidiu	#verifica se colidiu com os elementos do cenario
+			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario
 			add $26,$14,$0
 			beq $14,1,sairColisaoCenario
 									
@@ -404,7 +653,7 @@ colidiuCenario:
 	jr $ra			
 
 #Faz a verificação da colisão entre os quadrados			
-colidiu:		
+VerificarColidiu:		
 			lw $21,array_colisoes#esquerda Quadrado A
 			lw $22,array_colisoes+24#direita Quadrado B
 			add $21,$21,1	#Ajuste. Não detecta ao encostar no elemento
@@ -454,12 +703,23 @@ iniciarJogo:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		jal cenario
-		jal player
+		
+		#desenha o jogador virado para cima
+		li $8,352
+		li $25,512
+		li $10,0xff00	#Cor para do personagem
+		jal desenharPlayer
+		
+		#seta posição inicial do jogador. Default up(3)
+		li $14,3
+		sw $14,posicao_player
+		li $14,0
 		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
 	jr $ra	
+#Desenha o cenario do jogo
 cenario:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
