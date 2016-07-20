@@ -1,8 +1,99 @@
 .data
 	newLine: .asciiz " "
+	times: .word 1:4 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem
+	array_colisoes: .word 1:8
+	tipos_colisoes: .word 10:3	#1=colisao player,2 colisao tiro, 3 colisao mosntro
 	array_tiros: .word 1:100	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)
-	array_colisoes: .word 1:8	
+	qtd_monstro: .word 1	#Quantidade de monstros no mapa
+	pos_insercao: .word 1	#Aqui fica armazenado a posicao que devemos inserir no array de mosntros
+	#Arrays referente aos monstros do jogo
+	array_monstros: .word 1:224 #no maximo 4 monstros no mapa
+	monster: .word #Monster Right || 0-160(posição na memoria)
+				   #head 
+	               18,36,6,2,
+	               18,38,2,2,
+	               22,38,4,2,
+	               18,40,10,2,
+	               #body
+	               16,42,6,2,
+	               14,44,14,2,
+	               14,46,8,2,
+	               #leg Right
+	               14,48,4,2,
+	               12,50,4,2,
+	               #leg Left
+	               20,48,4,2,
+	               22,50,4,2,	
+	               #tail
+	               12,36,2,2,              		 
+	               14,38,2,2,
+	               12,40,2,4,
+	               
+	               #Monster Left || 176-366(posição na memoria)
+	               #head 
+	               16,36,6,2,
+	               20,38,2,2,
+	               14,38,4,2,
+	               12,40,10,2,
+	               #body
+	               18,42,6,2,
+	               12,44,14,2,
+	               18,46,8,2,
+	               #leg Right
+	               16,48,4,2,
+	               14,50,4,2,
+	               #leg Left
+	               22,48,4,2,
+	               24,50,4,2,	
+	               #tail
+	               26,36,2,2,              		 
+	               24,38,2,2,
+	               26,40,2,4,
+	               
+	               #Monster up || 352-512(posição na memoria)
+	               #head 
+	               26,40,2,6,
+	               24,44,2,2,
+	               24,38,2,4,
+	               22,36,2,10,
+	               #body
+	               20,42,2,6,
+	               18,36,2,14,
+	               16,42,2,8,
+	               #leg Right
+	               14,40,2,4,
+	               12,38,2,4,
+	               #leg Left
+	               14,46,2,4,
+	               12,48,2,4,	
+	               #tail
+	               26,50,2,2,              		 
+	               24,48,2,2,
+	               20,50,4,2,
+	               
+	               #Monster Down || 528-688(posição na memoria)
+	               #head 
+	               26,42,2,6,
+	               24,42,2,2,
+	               24,46,2,4,
+	               22,42,2,10,
+	               #body
+	               20,40,2,6,
+	               18,38,2,14,
+	               16,38,2,8,
+	               #leg Right
+	               14,38,2,4,
+	               12,36,2,4,
+	               #leg Left
+	               14,44,2,4,
+	               12,46,2,4,	
+	               #tail
+	               26,36,2,2,              		 
+	               24,38,2,2,
+	               20,36,4,2,	
+	#Arrays Referentes ao jogador	
 	posicao_player: .word 3	# 1-right,2-left,3-up,4-down
+	aportou_tecla: .word 1
 	shape_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
 	array_player: .word #Player Right || 0-160(posição na memoria)
 						#Head				  	              
@@ -124,18 +215,58 @@ main:
 	jal iniciarJogo	
 	li $27,0	#time		
 	update:	#aqui temos o loop de animação									
-		jal atualizarTiros
-				
+		jal atualizarTiros	#Atualiza os tiros do jogo		
+						
 		jal lerTeclado	#pooling do teclado									 
 		
-		addi $27,$27,1	#incrementa mais 1 no time
-		blt $27,500,naoResetTempo								
-			li $27,0 #reset time
-		naoResetTempo:
+		jal monstro	#Faz as operações relacionadas aos monstros do mapa
+		
+		#Atualizando times do jogo
+		jal atualizarTempoTiro
+		jal atualizarTempoMonstros
+		jal atualizarTempoPlayer
 	j update		
 end: li $2,10
      syscall 
 
+#Atualiza o array de tempos na posição que corresponde o tempo de refresh de tiros
+atualizarTempoTiro:	
+		lw $27,times
+		addi $27,$27,1	#incrementa mais 1 no time
+	
+		blt $27,250,naoResetTempoTiro								
+			li $27,0 #reset time		
+		naoResetTempoTiro:
+	
+		sw $27,times	
+	jr $ra
+	
+#Atualiza o array de tempos na posição que corresponde o tempo de refresh dos monstros	
+atualizarTempoMonstros:	
+	
+	lw $27,times+4
+	addi $27,$27,1	#incrementa mais 1 no time
+	
+	blt $27,1000,naoResetTempoMonstro								
+		li $27,0 #reset time		
+		naoResetTempoMonstro:
+	
+	sw $27,times+4
+	
+	jr $ra
+	
+atualizarTempoPlayer:
+	
+	lw $27,times+8
+	addi $27,$27,1	#incrementa mais 1 no time
+	
+	blt $27,1000,naoResetTempoPlayer								
+		li $27,0 #reset time		
+		naoResetTempoPlayer:
+	
+	sw $27,times+8
+	
+	jr $ra
 #função para desenhar um simples quadrado
 quadrado:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
@@ -209,9 +340,18 @@ lerTeclado:
 	  	lui $19,0xffff	#Recupera o valor que esta no enderço do leitor de teclado
 	  	lw $20,0($19)	#Os endereços ficam em 0xffff0004		
 		naoZero:beqz  $20,endNaoZero
-			lw $20,4($19)			
-			jal	player #desenha o player caso tenha pressionado alguma tecla			
-		endNaoZero:	
+			lw $20,4($19)
+			sw $20,aportou_tecla	#Seta a tecla aperta no na variavel de tecla																		
+		endNaoZero:
+		
+		lw $27,times+8	#Aqui fazemos o jogador se mover de forma constante
+		bne $27,0,naoMoverPlayer
+			lw $20,aportou_tecla
+			
+			beqz $20,naoMoverPlayer																																																																		
+				jal	player #desenha o player caso tenha pressionado alguma tecla
+				sw $0,aportou_tecla						
+		naoMoverPlayer:	
 	  	 		  			  	  			  			  	  			  	
 	  	#recupera o que esta na memoria
 		lw $ra, ($sp)
@@ -271,8 +411,14 @@ movePlayer:
 		#Verifica se apertou 'a' no teclado
 		a:bne $20,97,naoA
 		    addi $15,$15,-1	#Ajuste. Não detecta ao encostar no elemento						
-			jal colisaoGeral									
-			beq $14,1,naoA
+			
+			#Verifica se houve colisão
+			li $14,0
+			jal colisaoGeral		
+			#carrega para ver se houve colisao
+			lw $14,tipos_colisoes			
+									
+			beq $14,1,naoA				
 				#Seta a posição do jogador
 				li $15,2 #esquerda
 				sw $15,posicao_player
@@ -294,9 +440,15 @@ movePlayer:
 		#Verifica se apertou 'd' no teclado
 		d:bne $20,100,naoD	
 			addi $15,$15,1	#Ajuste. Não detecta ao encostar no elemento							
+			
+			#Verifica se houve colisão
+			li $14,0
 			jal colisaoGeral
+			#carrega para ver se houve colisao
+			lw $14,tipos_colisoes
+			
 			add $26,$14,$0			
-			beq $14,1,naoD
+			beq $14,1,naoD							
 				#Seta a posição do jogador
 				li $15,1 #direita
 				sw $15,posicao_player
@@ -318,8 +470,14 @@ movePlayer:
 		#Verifica se apertou 'w' no teclado
 		w:bne $20,119,naoW
 			addi $16,$16,-1	#Ajuste. Não detecta ao encostar no elemento							
-			jal colisaoGeral
-			beq $14,1,naoW
+			
+			#Verifica se houve colisão
+			li $14,0
+			jal colisaoGeral		
+			#carrega para ver se houve colisao
+			lw $14,tipos_colisoes
+			
+			beq $14,1,naoW			
 				#Seta a posição do jogador
 				li $15,3 #cima
 				sw $15,posicao_player
@@ -341,8 +499,14 @@ movePlayer:
 		#Verifica se apertou 's' no teclado
 		s:bne $20,115,naoS
 			addi $16,$16,1	#Ajuste. Não detecta ao encostar no elemento							
-			jal colisaoGeral
-			beq $14,1,naoS
+			
+			#Verifica se houve colisão
+			li $14,0
+			jal colisaoGeral		
+			#carrega para ver se houve colisao
+			lw $14,tipos_colisoes
+			
+			beq $14,1,naoS				
 				#Seta a posição do jogador
 				li $15,4 #baixo
 				sw $15,posicao_player
@@ -360,7 +524,11 @@ movePlayer:
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer							
 		naoS:
-			
+		
+		#Se ja verificou a colisão tiramos do array de tipos de colisao
+		li $14,2
+		sw $14,tipos_colisoes
+					
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
@@ -499,7 +667,8 @@ atualizarTiros:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		
-		addi $sp,$sp,-4	#tiramos novamente para usar o reg 11 sem perder dados		
+		addi $sp,$sp,-4	#tiramos novamente para usar o reg 11 sem perder dados
+		lw $27,times		
 		bne $27,0,sairAtualizarArrayTiros #garante que o tiro seja atualizado no tempo certo
 		#Garante que comça de 0
 		li $26,0				
@@ -626,9 +795,13 @@ colisaoTiro:
 		lw $17,array_tiros+8($26)
 		lw $18,array_tiros+12($26)
 		
+		li $14,4
 		jal colidiuCenarioTiro
 		
+		lw $14,tipos_colisoes+4
 		bne $14,1,semColisaoTiro
+			li $14,2
+			sw $14,tipos_colisoes+4
 			jal destroirTiro
 		semColisaoTiro:
 		
@@ -664,8 +837,10 @@ colidiuCenario:
 			lw $24,array_cenario+12($8)		
 				
 			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
-			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario			
-			beq $14,1,sairColisaoCenario
+			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario
+			
+			lw $13,tipos_colisoes($14)			
+			beq $13,1,sairColisaoCenario
 									
 			addi $8,$8,16
 			j colisaoCenario
@@ -699,7 +874,8 @@ VerificarColidiu:
 			add $21,$21,-1	#Ajuste. Não detecta ao encostar no elemento
 			blt $21,$22,sairVerificarColisao
 			
-			bateu: addi $14,$0,1 #caso tenha alguma colisão seta para 1
+			bateu: li $21,1 #caso tenha alguma colisão seta para 1
+				   sw $21,tipos_colisoes($14)
 		sairVerificarColisao:
 		
 	jr $ra
@@ -721,7 +897,9 @@ colidiuCenarioTiro:
 				
 			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
 			jal VerificarColidiuTiro	#verifica se colidiu com os elementos do cenario			
-			beq $14,1,sairColisaoCenarioTiro
+			
+			lw $13,tipos_colisoes($14)
+			beq $13,1,sairColisaoCenarioTiro
 									
 			addi $8,$8,16
 			j colisaoCenarioTiro
@@ -753,7 +931,8 @@ VerificarColidiuTiro:
 			addi $21,$21,2
 			blt $21,$22,sairVerificarColisaoTiro
 			
-			addi $14,$0,1 #caso tenha alguma colisão seta para 1
+			li $21,1 #caso tenha alguma colisão seta para 1
+			sw $21,tipos_colisoes($14)
 		sairVerificarColisaoTiro:
 	jr $ra
 
@@ -775,6 +954,183 @@ alimentarArrayColisaob:
 		add $22,$22,$24 #posisão da altura
 		sw $21,array_colisoes+24
 		sw $22,array_colisoes+28
+	jr $ra
+
+#Faz o controle geral dos monstros do jogo
+monstro:	
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+
+		lw $11,qtd_monstro
+		bgt $11,3,passouMaximo
+			addi $11,$11,1 #Acrescenta a quantidade de mosntros no mapa
+			sw $11,qtd_monstro
+		
+			jal inserirMonstro
+		
+		passouMaximo:
+		
+		#Atualiza o array de mosntros
+		lw $27,times+4
+		bne $27,0,naoAtualizarMonstros
+			jal atualizarMonstros
+		naoAtualizarMonstros:
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+inserirMonstro:
+	#Recupera os valores iniciais para inserir no array de monstros
+		li $8,0
+		lw $9,pos_insercao
+		add $9,$9,-1	#retira -1 devido ao problema no mips em colocar valores 0 na memoria.
+	
+		inserindoMonstro: bgt $8,160,inserindoMonstroSair		
+			add $9,$9,$8	#atualiza de acordo com o loop
+			
+			lw $10,monster($8)
+			sw $10,array_monstros($8)			
+			
+			#incrementando
+			add $8,$8,4
+			j inserindoMonstro				
+		inserindoMonstroSair:						
+		
+		#Faz a atualização do array de inserção de posição do monstro
+		lw $9,pos_insercao
+		addi $9,$9,177
+		
+		#Verifica se já atingiu a ultima posição para retornar a inserir na primeira posicao do array de mosntros
+		blt $9,896,naoResetarPos
+			li $9,1
+		naoResetarPos:
+		sw $9,pos_insercao
+		
+		#Reseta tudo que foi usado
+		li $8,0
+		li $9,0
+		li $10,0
+		
+	jr $ra	
+
+#Recupera o array de mosntros, atualiza-los e redesenha eles na posição nova
+atualizarMonstros:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)					
+		
+		AtualizarMonstro:bgt $8,996,sairAtualizarMonstro
+			addi $sp,$sp,-4
+			sw $8,($sp)	#Guardamos o que tem em 8 para nao perder
+			
+			lw $9,array_monstros($8)
+			beq $9,1,naoTemMonstro
+				
+				#jal moverMonstro
+				jal desenharMonstro
+				
+			naoTemMonstro:
+			
+			
+			lw $8, ($sp)	#recuperamos o que tinha e 8
+			addi $sp,$sp,4
+			
+			add $8,$8,224	#incrementa
+			j AtualizarMonstro
+		sairAtualizarMonstro:
+		#Reseta tudo que foi usado
+		li $8,0
+		li $9,0
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra			
+
+desenharMonstro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)								
+	
+		addi $10,$8,160
+	
+		pixelMonstro:bgt $8,$10,sairPixelMonstro							
+			addi $sp,$sp,-4
+			sw $10,($sp)	#Guardamos o que tem em 10 para nao perder
+			
+			addi $sp,$sp,-4
+			sw $8,($sp)	#Guardamos o que tem em 8 para nao perder
+			
+			lw $15,array_monstros($8)
+			lw $16,array_monstros+4($8)
+			lw $17,array_monstros+8($8)
+			lw $18,array_monstros+12($8)
+			li $10,0xffffff		
+			jal quadrado								
+			
+			lw $8, ($sp)	#recuperamos o que tinha e 10
+			addi $sp,$sp,4
+			
+			lw $10, ($sp)	#recuperamos o que tinha e 10
+			addi $sp,$sp,4															
+																																																
+			addi $8,$8,16
+			j pixelMonstro
+		sairPixelMonstro:
+	
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+moverMonstro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)								
+	
+		addi $10,$8,160
+	
+		movimentarMonstro:bgt $8,$10,sairMovimentarMonstro							
+			li $2,42
+			li $5,4	
+			syscall
+			
+			bne $4,0,nUp					
+				jal moverMonstroUp						
+			nUp:
+			
+			bne $4,1,nDown						
+				jal moverMonstroDown
+			nDown:
+			
+			bne $4,2,nRight																		
+				jal moverMonstroRight
+			nRight:
+			
+			bne $4,3,nLeft
+				jal moverMonstroLeft
+			nLeft:
+			
+			
+			addi $8,$8,16
+			j movimentarMonstro
+		sairMovimentarMonstro:
+	
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra			
+
+moverMonstroUp:
+
+	jr $ra
+moverMonstroDown:
+
+	jr $ra
+moverMonstroLeft:																			
+
+	jr $ra
+moverMonstroRight:
+
 	jr $ra
 #Inicia o Cenario do Jogo	
 iniciarJogo:
