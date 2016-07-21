@@ -1,15 +1,17 @@
 .data
 	newLine: .asciiz " "
+	newBreal: .asciiz "\n" 
 	times: .word 1:4 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem
 	array_colisoes: .word 1:8
 	tipos_colisoes: .word 10:3	#1=colisao player,2 colisao tiro, 3 colisao mosntro
-	array_tiros: .word 1:100	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)
-	qtd_monstro: .word 1	#Quantidade de monstros no mapa
-	pos_insercao: .word 1	#Aqui fica armazenado a posicao que devemos inserir no array de mosntros
+	array_tiros: .word 1:100	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)	
 	#Arrays referente aos monstros do jogo
-	array_monstros: .word 1:224 #no maximo 4 monstros no mapa
+	qtd_monstro: .word 1	#Quantidade de monstros no mapa
+	array_monstros: .word 1:896 #no maximo 4 monstros no mapa(com as posicoes:R,L,U,D)
+	array_shapes_monster: .word 1:16 #são 4 monstro, por isso 16 numeros alocados
+	posicao_monstros: .word 1:5 # 1-right,2-left,3-up,4-down. O ultimo numero corresponde a em qual index inserir
 	monster: .word #Monster Right || 0-160(posição na memoria)
-				   #head 
+				   #head
 	               18,36,6,2,
 	               18,38,2,2,
 	               22,38,4,2,
@@ -90,7 +92,7 @@
 	               #tail
 	               26,36,2,2,              		 
 	               24,38,2,2,
-	               20,36,4,2,	
+	               20,36,4,2, 
 	#Arrays Referentes ao jogador	
 	posicao_player: .word 3	# 1-right,2-left,3-up,4-down
 	aportou_tecla: .word 1
@@ -961,19 +963,30 @@ monstro:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 
+		naoPassou:
 		lw $11,qtd_monstro
-		bgt $11,3,passouMaximo
+		bgt $11,4,passouMaximo
+			
+			li $2,1
+			add $4,$11,$0
+			syscall
+			
+			li $2,4
+			la $4,newBreal
+			syscall
+			
 			addi $11,$11,1 #Acrescenta a quantidade de mosntros no mapa
 			sw $11,qtd_monstro
 		
 			jal inserirMonstro
-		
-		passouMaximo:
+			
+			j naoPassou
+		passouMaximo:		
 		
 		#Atualiza o array de mosntros
 		lw $27,times+4
 		bne $27,0,naoAtualizarMonstros
-			jal atualizarMonstros
+			jal atualizarMonstros			
 		naoAtualizarMonstros:
 		
 		#recupera o que esta na memoria
@@ -981,32 +994,65 @@ monstro:
 		addi $sp,$sp,4
 	jr $ra
 
+imprimirArrayMonstros:
+	li $11,0
+	li $8,0
+	
+	AtualizarMonstrot:bgt $8,2688,sairAtualizarMonstrot
+			
+			add $11,$0,$8
+			addi $10,$11,892
+			
+			i: bgt $11,$10,ni						
+				
+				lw $4,array_monstros($11)
+				li $2,1
+				syscall
+				
+				li $2,4
+				la $4,newLine
+				syscall
+				
+				add $11,$11,4
+				j i
+			ni:
+			
+			li $2,4
+			la $4,newBreal
+			syscall
+			
+			add $8,$8,896	#incrementa
+			j AtualizarMonstrot
+	sairAtualizarMonstrot:
+	
+	j end
+	
+jr $ra
 inserirMonstro:
 	#Recupera os valores iniciais para inserir no array de monstros
 		li $8,0
-		lw $9,pos_insercao
-		add $9,$9,-1	#retira -1 devido ao problema no mips em colocar valores 0 na memoria.
-	
-		inserindoMonstro: bgt $8,160,inserindoMonstroSair		
-			add $9,$9,$8	#atualiza de acordo com o loop
-			
-			lw $10,monster($8)
-			sw $10,array_monstros($8)			
-			
-			#incrementando
-			add $8,$8,4
-			j inserindoMonstro				
-		inserindoMonstroSair:						
+		li $9,0
 		
-		#Faz a atualização do array de inserção de posição do monstro
-		lw $9,pos_insercao
-		addi $9,$9,177
-		
-		#Verifica se já atingiu a ultima posição para retornar a inserir na primeira posicao do array de mosntros
-		blt $9,896,naoResetarPos
-			li $9,1
-		naoResetarPos:
-		sw $9,pos_insercao
+		iterarM: bgt $9,2688,nIterarM			
+			lw $10,array_monstros($9)								
+			bne $10,1,incrementarM
+			
+			inserindoMonstro: bgt $8,892,inserindoMonstroSair		
+				add $11,$8,$9	#atualiza de acordo com o loop
+			
+				lw $10,monster($8)
+				sw $10,array_monstros($11)			
+						
+				#incrementando
+				add $8,$8,4
+				j inserindoMonstro				
+			inserindoMonstroSair: j nIterarM
+			
+			incrementarM:
+			addi $9,$9,896
+			li $8,0
+			j iterarM
+		nIterarM:										
 		
 		#Reseta tudo que foi usado
 		li $8,0
@@ -1019,26 +1065,42 @@ inserirMonstro:
 atualizarMonstros:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)					
+		li $8,0
+		#Seta o array de posições de monstros para começar do primeiro elemento
+		li $13,1
+		sw $13,posicao_monstros+16		
+		li $13,0
 		
-		AtualizarMonstro:bgt $8,996,sairAtualizarMonstro
+		AtualizarMonstro:bgt $8,2688,sairAtualizarMonstro
 			addi $sp,$sp,-4
 			sw $8,($sp)	#Guardamos o que tem em 8 para nao perder
 			
-			lw $9,array_monstros($8)
-			beq $9,1,naoTemMonstro
-				
-				#jal moverMonstro
-				jal desenharMonstro
-				
+			addi $sp,$sp,-4
+			sw $13,($sp)						
+			
+			lw $9,array_monstros($8)															
+			beq $9,1,naoTemMonstro		
+				#apaga o monstro que vai se mexer						
+				jal calularPosicaoMonstro
+				jal limparBackgroundMonstro
+				#faz os calculos para movimentar o monstro
+				lw $13, ($sp)	#recuperamos o que tinha e 13																																					
+				jal moverMonstro
+				#Faz os calculos para desenhar o monstro
+				jal calularPosicaoMonstro				
+				jal desenharMonstro				
 			naoTemMonstro:
-			
-			
+						
+			lw $13, ($sp)	#recuperamos o que tinha e 13
+			addi $sp,$sp,4
+																					
 			lw $8, ($sp)	#recuperamos o que tinha e 8
 			addi $sp,$sp,4
 			
-			add $8,$8,224	#incrementa
+			addi $13,$13,4	#Diz a posição do array de posições dos monstros
+			add $8,$8,896	#incrementa
 			j AtualizarMonstro
-		sairAtualizarMonstro:
+		sairAtualizarMonstro:		
 		#Reseta tudo que foi usado
 		li $8,0
 		li $9,0
@@ -1048,36 +1110,62 @@ atualizarMonstros:
 		addi $sp,$sp,4
 	jr $ra			
 
+#Pega o valor da posição no array de posição de monstros para verificar para que lado ele deve virar
+calularPosicaoMonstro:
+		lw $10,posicao_monstros($13)	#carrega para que lado o monstro deve virar
+		
+		bne $10,1,notRight
+			li $10,0
+		notRight:
+		
+		bne $10,2,notLeft
+			li $10,224
+		notLeft:
+		
+		bne $10,3,notUp
+			li $10,448
+		notUp:
+		
+		bne $10,4,notDown
+			li $10,672
+		notDown:
+	jr $ra
+	
 desenharMonstro:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)								
+		
+		add $20,$8,$10
+		addi $21,$20,208			
 	
-		addi $10,$8,160
-	
-		pixelMonstro:bgt $8,$10,sairPixelMonstro							
+		pixelMonstro:bgt $20,$21,sairPixelMonstro							
 			addi $sp,$sp,-4
-			sw $10,($sp)	#Guardamos o que tem em 10 para nao perder
+			sw $21,($sp)	#Guardamos o que tem em 20 para nao perder
 			
 			addi $sp,$sp,-4
-			sw $8,($sp)	#Guardamos o que tem em 8 para nao perder
+			sw $20,($sp)	#Guardamos o que tem em 20 para nao perder
 			
-			lw $15,array_monstros($8)
-			lw $16,array_monstros+4($8)
-			lw $17,array_monstros+8($8)
-			lw $18,array_monstros+12($8)
+			lw $15,array_monstros($20)								
+			lw $16,array_monstros+4($20)			
+			lw $17,array_monstros+8($20)			
+			lw $18,array_monstros+12($20)			
 			li $10,0xffffff		
 			jal quadrado								
 			
-			lw $8, ($sp)	#recuperamos o que tinha e 10
+			lw $20, ($sp)	#recuperamos o que tinha e 10
 			addi $sp,$sp,4
 			
-			lw $10, ($sp)	#recuperamos o que tinha e 10
+			lw $21, ($sp)	#recuperamos o que tinha e 10
 			addi $sp,$sp,4															
 																																																
-			addi $8,$8,16
+			addi $20,$20,16
 			j pixelMonstro
 		sairPixelMonstro:
-	
+		
+		#reset
+		li $20,0
+		li $21,0
+		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
@@ -1086,52 +1174,166 @@ desenharMonstro:
 moverMonstro:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)								
-	
-		addi $10,$8,160
-	
-		movimentarMonstro:bgt $8,$10,sairMovimentarMonstro							
-			li $2,42
-			li $5,4	
-			syscall
+					
+		#faz o random para o monstro andar de forma aleatoria no mapa
+		li $2,42
+		li $5,4	
+		syscall
+		
+		#Prepara para inserir no array o valor correspondente a posicao do monstro
+		addi $5,$4,1
+		sw $5,posicao_monstros($13)				
 			
-			bne $4,0,nUp					
-				jal moverMonstroUp						
-			nUp:
+		add $27,$8,$0				
 			
-			bne $4,1,nDown						
-				jal moverMonstroDown
-			nDown:
+		bne $4,0,nRight																		
+			jal moverMonstroRight				
+		nRight:
 			
-			bne $4,2,nRight																		
-				jal moverMonstroRight
-			nRight:
+		bne $4,1,nLeft
+			jal moverMonstroLeft
+		nLeft:												
+		
+		bne $4,2,nUp					
+			jal moverMonstroUp						
+		nUp:
 			
-			bne $4,3,nLeft
-				jal moverMonstroLeft
-			nLeft:
-			
-			
-			addi $8,$8,16
-			j movimentarMonstro
-		sairMovimentarMonstro:
-	
+		bne $4,3,nDown						
+			jal moverMonstroDown
+		nDown:
+		
+		#reset
+		li $27,0
+		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
 	jr $ra			
-
-moverMonstroUp:
-
+	
+moverMonstroUp:	
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)	
+							
+		li $14,-4
+		jal moveVerticalMonster
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
 	jr $ra
+	
 moverMonstroDown:
-
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)			
+		
+		li $14,4
+		jal moveVerticalMonster
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
 	jr $ra
-moverMonstroLeft:																			
-
+	
+moverMonstroLeft:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)																				
+		
+		li $14,-4
+		jal moveHorizontalMonster
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
 	jr $ra
+	
 moverMonstroRight:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)	
 
+		li $14,4
+		jal moveHorizontalMonster
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
 	jr $ra
+
+#Faz a movimentação para Left ou Right, O parametro deve ser passado no reg $14
+moveHorizontalMonster:
+		#Atualiza a forma do player
+		#lw $15,array_shapes_monster
+		#add $15,$15,$14
+		#sw $15,array_shapes_monster
+		
+		addi $10,$27,880
+		montarMoverHorizontalMonster:bgt $27,$10,sairMontarMoverHorizontalMonster	
+				
+				lw $15,array_monstros($27)
+				add $15,$15,$14
+				sw $15,array_monstros($27)										
+				
+				addi $27,$27,16
+				j montarMoverHorizontalMonster
+			sairMontarMoverHorizontalMonster:		
+	jr $ra	
+	
+#Faz a movimentação para Up ou Down, O parametro deve ser passado no reg $14
+moveVerticalMonster:
+		#Atualiza a forma do player
+		#lw $16,array_shapes_monster
+		#add $16,$16,$14
+		#sw $16,array_shapes_monster
+		
+		addi $10,$27,880
+		montarMoverVerticalMonster:bgt $27,$10,sairMontarMoverVerticalMonster	
+				
+				lw $16,array_monstros+4($27)
+				add $16,$16,$14
+				sw $16,array_monstros+4($27)											
+				
+				addi $27,$27,16
+				j montarMoverVerticalMonster
+			sairMontarMoverVerticalMonster:					
+	jr $ra
+	
+limparBackgroundMonstro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)	
+		
+		add $20,$8,$10
+		addi $21,$20,208
+		
+		apagarMonstro:bgt $20,$21,sairApagarMonstro							
+			addi $sp,$sp,-4
+			sw $21,($sp)	#Guardamos o que tem em 20 para nao perder
+			
+			addi $sp,$sp,-4
+			sw $20,($sp)	#Guardamos o que tem em 20 para nao perder
+		
+			lw $15,array_monstros($20)
+			lw $16,array_monstros+4($20)
+			lw $17,array_monstros+8($20)
+			lw $18,array_monstros+12($20)
+			li $10,0x0000		
+			jal quadrado
+			
+			lw $20, ($sp)	#recuperamos o que tinha e 10
+			addi $sp,$sp,4
+			
+			lw $21, ($sp)	#recuperamos o que tinha e 10
+			addi $sp,$sp,4															
+																																																
+			addi $20,$20,16
+			j apagarMonstro
+		sairApagarMonstro:
+		
+		#reset
+		li $20,0
+		li $21,0
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+		
 #Inicia o Cenario do Jogo	
 iniciarJogo:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
