@@ -81,25 +81,22 @@
 		
 .text
 main:
-	#Recupera os dados da memoria
+	#Recupera os dados da memoria	
+	
 	montar:bgt $8,208,sairmontar	
 		lw $15,monster_right($8)
 		lw $16,monster_right+4($8)
 		lw $17,monster_right+8($8)
 		lw $18,monster_right+12($8)
 		li $10,0xffffff		
+		
+		addi $15,$15,216
+		addi $16,$16,100
 		jal desenharQuadrado
 		
 		addi $8,$8,16
 		j montar						
 	sairmontar:
-	
-	li $15,12
-		li $16,36
-		li $17,16
-		li $18,16
-		li $10,0xffffff		
-		jal desenharQuadrado
 						
 end: li $2,10
      syscall

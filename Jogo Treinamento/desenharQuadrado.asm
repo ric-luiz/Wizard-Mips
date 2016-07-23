@@ -989,40 +989,65 @@ monstro:
 	jr $ra
 
 inserirMonstro:
-	#Recupera os valores iniciais para inserir no array de monstros
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		#Garante que começa do 0
 		li $8,0
-		li $9,0				
+		li $9,0
+		li $14,0				
 		
 		iterarM: bgt $9,2688,nIterarM
 					
 			lw $10,array_monstros($9) #somente se tiver espaço para inserir no array
 			bne $10,1,incrementarM	
 			
+			jal posicionarMapa
+			
 			#Shape inicial do monstro
 			lw $15,shape_monster
 			lw $16,shape_monster+4
 			lw $17,shape_monster+8
 			lw $18,shape_monster+12
+			
+			#adicionando com os ajsutes
+			add $15,$15,$10
+			add $16,$16,$12
+			
 			#Inserir as shapes dos monstros						
 			sw $15,array_shapes_monster($13)
 			sw $16,array_shapes_monster+4($13)
 			sw $17,array_shapes_monster+8($13)
 			sw $18,array_shapes_monster+12($13)					
 			
-			inserindoMonstro: bgt $8,892,inserindoMonstroSair		
+			inserindoMonstro: bgt $8,880,inserindoMonstroSair		
 				add $11,$8,$9	#atualiza de acordo com o loop
 			
-				lw $10,monster($8)
-				sw $10,array_monstros($11)			
-						
+				#inicial do monstro
+				lw $15,monster($8)
+				lw $16,monster+4($8)
+				lw $17,monster+8($8)
+				lw $18,monster+12($8)
+				
+				#adicionando com os ajsutes
+				add $15,$15,$10
+				add $16,$16,$12
+				
+				#Inserir os valores up.down,left,right dos monstros						
+				sw $15,array_monstros($11)
+				sw $16,array_monstros+4($11)
+				sw $17,array_monstros+8($11)
+				sw $18,array_monstros+12($11)
+														
 				#incrementando
-				add $8,$8,4
+				add $8,$8,16
 				j inserindoMonstro				
 			inserindoMonstroSair: 
-			addi $13,$13,16	#Incrementador das shapes
+			addi $13,$13,16	#Incrementador das shapes			
 			j nIterarM
 			
 			incrementarM:
+			addi $14,$14,1
 			addi $9,$9,896			
 			li $8,0
 			j iterarM
@@ -1031,15 +1056,44 @@ inserirMonstro:
 		#Reseta tudo que foi usado
 		li $8,0
 		li $9,0
+		li $10,0
+		li $12,0	
 		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
 	jr $ra	
+
+posicionarMapa:		
+		#nd = nao diagoanal
+		bne $14,0,nDesquerdaCima
+			li $10,0	#ajuste para o x
+			li $12,0    #ajuste para o y
+		nDesquerdaCima:
+	
+		bne $14,1,nDesquerdaBaixo
+			li $10,0	#ajuste para o x
+			li $12,100  #ajuste para o y
+		nDesquerdaBaixo:
+	
+		bne $14,2,nDdireitaCima
+			li $10,216	#ajuste para o x
+			li $12,0    #ajuste para o y
+		nDdireitaCima:
+	
+		bne $14,3,nDdireitaBaixo
+			li $10,216	#ajuste para o x
+			li $12,100  #ajuste para o y
+		nDdireitaBaixo:
+	
+	jr $ra
 
 #Recupera o array de mosntros, atualiza-los e redesenha eles na posição nova
 atualizarMonstros:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		
-	    #jal imprimirArrayMonstros
+	    jal imprimirArrayMonstros
 												
 		li $8,0
 		#Seta o array de posições de monstros para começar do primeiro elemento
