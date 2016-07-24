@@ -1,7 +1,7 @@
 .data
 	newLine: .asciiz " "
 	newBreal: .asciiz "\n" 
-	times: .word 1:4 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem
+	times: .word 1:4 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem,4-spawnMonstro
 	array_colisoes: .word 1:8
 	tipos_colisoes: .word 10:6	#1=colisao player,2 colisao tiro, 3-6 colisao mosntro
 	array_tiros: .word 1:120	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)	
@@ -230,6 +230,7 @@ main:
 		jal atualizarTempoTiro
 		jal atualizarTempoMonstros
 		jal atualizarTempoPlayer
+		jal atualizarTempoSpawnMonstro
 	j update		
 end: li $2,10
      syscall 
@@ -272,6 +273,20 @@ atualizarTempoPlayer:
 	sw $27,times+8
 	
 	jr $ra
+
+atualizarTempoSpawnMonstro:
+	
+	lw $27,times+12
+	addi $27,$27,1	#incrementa mais 1 no time
+	
+	blt $27,100000,naoResetTempoSpawn								
+		li $27,0 #reset time		
+		naoResetTempoSpawn:
+	
+	sw $27,times+12
+	
+	jr $ra	
+
 #função para desenhar um simples quadrado
 quadrado:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
@@ -644,7 +659,7 @@ tiroJogador:
 alimentarArrayTiros:
 		#Garante que comça de 0
 		li $11,0
-		arrayTiros:bgt $11,384,sairArrayTiros
+		arrayTiros:bgt $11,460,sairArrayTiros
 			lw $12,array_tiros($11)
 																
 			bne $12,1,jaTemTiro
@@ -676,7 +691,7 @@ atualizarTiros:
 		bne $27,0,sairAtualizarArrayTiros #garante que o tiro seja atualizado no tempo certo
 		#Garante que comça de 0
 		li $26,0				
-		atualizarArrayTiros:bgt $26,384,sairAtualizarArrayTiros							
+		atualizarArrayTiros:bgt $26,460,sairAtualizarArrayTiros							
 			lw $12,array_tiros($26)
 			sw $26, ($sp)									
 			
@@ -856,6 +871,38 @@ colidiuCenario:
 		addi $sp,$sp,4
 	jr $ra			
 
+#Verifica se colidiu com o tiro. Espera que os reg [15-18] estejam preenchidos com os dados corretos
+colidiuTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)		
+		
+		jal alimentarArrayColisaoA #Insere no array de colisões os elementos do quadrado a
+		li $8,0
+		#Pega as posições dos quadrados do cenario
+		colisaoGeralTiro: bgt $8,460,saircolisaoGeralTiro
+			#Recupera os dados da memoria	
+			lw $21,array_tiros($8)
+			beq $21,1,incrementadorTiro	#caso n exista um tiro naquela posição do array
+			lw $22,array_tiros+4($8)
+			lw $23,array_tiros+8($8)
+			lw $24,array_tiros+12($8)		
+				
+			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
+			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario
+			
+			lw $13,tipos_colisoes($14)			
+			beq $13,1,saircolisaoGeralTiro
+									
+			incrementadorTiro: addi $8,$8,20
+			j colisaoGeralTiro
+		saircolisaoGeralTiro:				
+						
+		add $8,$0,$0 #Reset no contador
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra	
+
 #Faz a verificação da colisão entre os quadrados			
 VerificarColidiu:		
 			lw $21,array_colisoes#esquerda Quadrado A
@@ -965,17 +1012,25 @@ monstro:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)				
 		
+		lw $27,times+12
+		bne $27,0,passouMaximo
 		li $13,0
 		naoPassou:
 		lw $11,qtd_monstro
 		bgt $11,4,passouMaximo						
 			addi $11,$11,1 #Acrescenta a quantidade de mosntros no mapa
 			sw $11,qtd_monstro
-		
-			jal inserirMonstro
+			
+			jal inserirMonstro						
 			
 			j naoPassou
-		passouMaximo:li $13,0								
+		passouMaximo:li $13,0												
+		
+		#Verifica se aconteceu alguma colisão entre os monstros e algum tiro
+		lw $27,times
+		bne $27,0,naoVerificarColisaoMonstroTiro
+			jal verificarBateuTiro
+		naoVerificarColisaoMonstroTiro:
 		
 		#Atualiza o array de mosntros
 		lw $27,times+4
@@ -995,7 +1050,7 @@ inserirMonstro:
 		#Garante que começa do 0
 		li $8,0
 		li $9,0
-		li $14,0				
+		li $14,0					
 		
 		iterarM: bgt $9,2688,nIterarM
 					
@@ -1043,10 +1098,9 @@ inserirMonstro:
 				add $8,$8,16
 				j inserindoMonstro				
 			inserindoMonstroSair: 
-			addi $13,$13,16	#Incrementador das shapes			
-			j nIterarM
 			
-			incrementarM:
+			incrementarM:			
+			addi $13,$13,16	#Incrementador das shapes
 			addi $14,$14,1
 			addi $9,$9,896			
 			li $8,0
@@ -1091,9 +1145,7 @@ posicionarMapa:
 #Recupera o array de mosntros, atualiza-los e redesenha eles na posição nova
 atualizarMonstros:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
-		sw $ra, ($sp)
-		
-	    jal imprimirArrayMonstros
+		sw $ra, ($sp)		
 												
 		li $8,0
 		#Seta o array de posições de monstros para começar do primeiro elemento
@@ -1108,12 +1160,11 @@ atualizarMonstros:
 			addi $sp,$sp,-4
 			sw $13,($sp)						
 			
-			lw $9,array_monstros($8)																																										
-																																																												
+			lw $9,array_monstros($8)																																													
+																																																																																																																					
 			beq $9,1,naoTemMonstro		
-				#Moveo monstro para uma posição aleatoria
-				#lw $13, ($sp)	#recuperamos o que tinha e 13																																									
-				jal moverMonstro			
+				#Moveo monstro para uma posição aleatoria																																																																																														
+				jal moverMonstro							
 			naoTemMonstro:
 						
 			lw $13, ($sp)	#recuperamos o que tinha e 13
@@ -1260,12 +1311,134 @@ moverMonstro:
 		sw $14,tipos_colisoes+8($13)
 		
 		#reset
-		li $27,0
+		li $27,0				
 		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
 	jr $ra			
+
+verificarBateuTiro:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4
+		sw $13, ($sp)
+		
+		addi $sp,$sp,-4
+		sw $8, ($sp)
+		
+		#garante que comecem do 0
+		li $26,0
+		li $27,0
+		
+		VerificarTiro:bgt $26,48,terminouVerificarTiro						
+			lw $15,array_shapes_monster($26)
+			beq $15,1,nPegoTiro	#caso não tenha uma shape associada		
+			lw $16,array_shapes_monster+4($26)
+			lw $17,array_shapes_monster+8($26)
+			lw $18,array_shapes_monster+12($26)		
+			li $14,4
+		
+			jal colidiuTiro
+			
+			bne $13,1,nPegoTiro
+				j destroirMonstro
+			nPegoTiro:
+			
+			#incrementadores
+			addi $26,$26,16
+			addi $27,$27,4	#posição da colição no array de colisoes dos monstros
+			
+			j VerificarTiro
+		terminouVerificarTiro:																
+		
+		#Reset
+		li $26,0
+		li $27,0
+		
+		lw $8, ($sp)
+		addi $sp,$sp,4
+		
+		lw $13, ($sp)
+		addi $sp,$sp,4
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+#destroi o monstro que colidiu com o tiro do jogador
+destroirMonstro:		
+		
+		add $14,$0,$27
+		#verifica qual monstro que recebeu o tiro
+		bne $27,12,nDestroir1
+			li $27,2688
+			li $26,48						
+			jal destruindoMonstro						
+		nDestroir1:
+		
+		bne $27,0,nDestroir2
+			li $27,0
+			li $26,0
+			jal destruindoMonstro
+		nDestroir2:
+		
+		bne $27,8,nDestroir3
+			li $27,1792
+			li $26,32
+			jal destruindoMonstro
+		nDestroir3:
+		
+		bne $27,4,nDestroir4
+			li $27,896
+			li $26,16
+			jal destruindoMonstro
+		nDestroir4:
+		
+	j terminouVerificarTiro	#retorna para o fim do da função acima
+
+#Destroi o monstro especificado na função acima
+destruindoMonstro:		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4
+		sw $13, ($sp)
+		
+		#Tiramos da quantidade maxima de monstros no mapa
+		lw $13,qtd_monstro
+		addi $13,$13,-1
+		sw $13,qtd_monstro
+		
+		add $13,$14,$0
+		
+		jal limparBackgroundMonstro
+		
+		lw $13, ($sp)
+		#Limpar a shape desse monstro
+		sw $13,array_shapes_monster($26)
+		sw $13,array_shapes_monster+4($26)
+		sw $13,array_shapes_monster+8($26)
+		sw $13,array_shapes_monster+12($26)
+		
+		addi $26,$27,892	#usado como condição de parada para o loop de retirar o monstro atingido		
+		retirarMonstro:bgt $27,$26,sairRetirarMonstro
+			
+			sw $13,array_monstros($27)	#Ja que o reg 13 é vamos usar para limpar nosso array de mosntros
+			
+			addi $27,$27,4
+			j retirarMonstro
+		sairRetirarMonstro:
+		
+		lw $13, ($sp)
+		addi $sp,$sp,4
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4				
+	jr $ra
 
 colisaoGeralMonster:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
@@ -1273,7 +1446,7 @@ colisaoGeralMonster:
 		
 		addi $sp,$sp,-4
 		sw $13, ($sp)
-		
+				
 		#colisoes_monstros:
 		jal posicaoShapeMonster						
 		
@@ -1285,7 +1458,7 @@ colisaoGeralMonster:
 		add $15,$15,$26
 		add $16,$16,$14
 		addi $14,$13,8														
-											
+																																	
 		jal colidiuCenario				
 		
 		lw $13, ($sp)
@@ -1640,6 +1813,12 @@ imprimirColisoes:
 	jr $ra	
 
 imprimirArrayMonstros:
+	addi $sp,$sp,-4 #tiramos o espaço de memoria
+	sw $8, ($sp)
+		
+	addi $sp,$sp,-4 #tiramos o espaço de memoria
+	sw $11, ($sp)
+
 	li $11,0
 	li $8,0
 	
@@ -1670,4 +1849,11 @@ imprimirArrayMonstros:
 			j AtualizarMonstrot			
 	sairAtualizarMonstrot:
 	
+	#recupera o que esta na memoria
+	lw $11, ($sp)
+	addi $sp,$sp,4
+		
+	#recupera o que esta na memoria
+	lw $8, ($sp)
+	addi $sp,$sp,4	
 jr $ra
