@@ -1,17 +1,18 @@
-.data
+.data	
 	newLine: .asciiz " "
-	newBreal: .asciiz "\n" 
-	times: .word 1:4 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem,4-spawnMonstro
-	array_colisoes: .word 1:8
-	tipos_colisoes: .word 10:6	#1=colisao player,2 colisao tiro, 3-6 colisao mosntro
-	array_tiros: .word 1:120	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)	
+	newBreal: .asciiz "\n"
+	score: .word 1		
+	times: .word 1:20 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem,4-spawnMonstro
+	array_colisoes: .word 1:10
+	tipos_colisoes: .word 10:10	#1=colisao player,2 colisao tiro, 3-6 colisao mosntro
+	array_tiros: .word 1:200	#Possui x,y,width,height,direcao (1-right,2-left,3-up,4-down)	
 	#Arrays referente aos monstros do jogo
-	qtd_monstro: .word 1	#Quantidade de monstros no mapa
-	array_monstros: .word 1:896 #no maximo 4 monstros no mapa(com as posicoes:R,L,U,D)
-	array_shapes_monster: .word 1:20 #são 4 monstro, por isso 16 numeros alocados
-	posicao_monstros: .word 1:5 # 1-right,2-left,3-up,4-down. O ultimo numero corresponde a em qual index inserir
+	qtd_monstro: .word 1,	#Quantidade de monstros no mapa
+	array_monstros: .word 1:900, #no maximo 4 monstros no mapa(com as posicoes:R,L,U,D)
+	array_shapes_monster: .word 1:32, #são 4 monstro, por isso 16 numeros alocados
+	posicao_monstros: .word 1:10 # 1-right,2-left,3-up,4-down. O ultimo numero corresponde a em qual index inserir
 	shape_monster: .word 12,36,16,16,
-	colisoes_monstros: .word 2:4
+	colisoes_monstros: .word 2:8,
 	monster: .word #Monster Right || 0-160(posição na memoria)
 				   #head
 	               18,36,6,2,
@@ -96,9 +97,9 @@
 	               24,38,2,2,
 	               20,36,4,2, 
 	#Arrays Referentes ao jogador	
-	posicao_player: .word 3	# 1-right,2-left,3-up,4-down
-	aportou_tecla: .word 1
-	shape_player: .word 120,120,16,16 #Possui a seguinte ordem: x,y,width,height
+	posicao_player: .word 3,	# 1-right,2-left,3-up,4-down
+	aportou_tecla: .word 1,
+	shape_player: .word 120,120,16,16, #Possui a seguinte ordem: x,y,width,height
 	array_player: .word #Player Right || 0-160(posição na memoria)
 						#Head				  	              
 				  		122,120,6,2,
@@ -169,7 +170,7 @@
 	              		132,128,2,4,
 	              		#Legs Right
 	              		134,120,2,4,
-	              		132,122,2,4
+	              		132,122,2,4,
 	              		
 	array_cenario: .word #Bordas do jogo
 						 4,32,248,4,  #Barra Superior
@@ -212,25 +213,24 @@
 	                     92,136,8,16,
 	                     156,136,8,16,
 	                     188,132,16,4,
-	                     220,116,8,20
+	                     220,116,8,20,
 .text
 
 main:
-	jal iniciarJogo	
-	#jal mudarPosicaoArrayMonstro
+	jal iniciarJogo		
 	li $27,0	#time		
-	update:	#aqui temos o loop de animação									
+	update:	#aqui temos o loop de animação															
 		jal atualizarTiros	#Atualiza os tiros do jogo		
 						
 		jal lerTeclado	#pooling do teclado									 
 		
-		jal monstro	#Faz as operações relacionadas aos monstros do mapa
+		jal monstro	#Faz as operações relacionadas aos monstros do mapa				
 		
 		#Atualizando times do jogo
 		jal atualizarTempoTiro
 		jal atualizarTempoMonstros
 		jal atualizarTempoPlayer
-		jal atualizarTempoSpawnMonstro
+		jal atualizarTempoSpawnMonstro				
 	j update		
 end: li $2,10
      syscall 
@@ -286,7 +286,7 @@ atualizarTempoSpawnMonstro:
 	sw $27,times+12
 	
 	jr $ra	
-
+		
 #função para desenhar um simples quadrado
 quadrado:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
@@ -366,13 +366,12 @@ lerTeclado:
 		
 		lw $27,times+8	#Aqui fazemos o jogador se mover de forma constante
 		bne $27,0,naoMoverPlayer
-			lw $20,aportou_tecla
-			
+			lw $20,aportou_tecla			
 			beqz $20,naoMoverPlayer																																																																		
 				jal	player #desenha o player caso tenha pressionado alguma tecla
 				sw $0,aportou_tecla						
-		naoMoverPlayer:	
-	  	 		  			  	  			  			  	  			  	
+		naoMoverPlayer:		  	 	  	
+	  	 		  			  	  			  			  	  			  			  			  	  			  			  	  			  	 		  			  	  			  			  	  			  			  			  	  			  			  	  			  	
 	  	#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4		  	  			  			  	  			  	  			  	
@@ -401,7 +400,7 @@ player:
 desenharPlayer:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)	
-		
+
 		montar:bgt $8,$25,sairmontar	
 			lw $15,array_player($8)
 			lw $16,array_player+4($8)
@@ -1021,7 +1020,7 @@ monstro:
 			addi $11,$11,1 #Acrescenta a quantidade de mosntros no mapa
 			sw $11,qtd_monstro
 			
-			jal inserirMonstro						
+			jal inserirMonstro									
 			
 			j naoPassou
 		passouMaximo:li $13,0												
@@ -1675,7 +1674,8 @@ limparBackgroundMonstro:
 #Inicia o Cenario do Jogo	
 iniciarJogo:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
-		sw $ra, ($sp)
+		sw $ra, ($sp)		
+		
 		jal cenario
 		
 		#desenha o jogador virado para cima
@@ -1687,7 +1687,7 @@ iniciarJogo:
 		#seta posição inicial do jogador. Default up(3)
 		li $14,3
 		sw $14,posicao_player
-		li $14,0
+		li $14,0				
 		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
