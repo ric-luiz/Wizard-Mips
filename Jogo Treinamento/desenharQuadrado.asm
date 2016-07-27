@@ -1,7 +1,18 @@
 .data	
 	newLine: .asciiz " "
 	newBreal: .asciiz "\n"
-	score: .word 1		
+	scores: .word 1:4
+	apagarScores: .word 166,160,80,20	
+	zero:   .word 166,160,3,16, 166,160,13,3, 179,160,3,16, 166,172,13,4, #48
+	um:     .word 174,160,3,16, #0
+	dois:   .word 166,160,8,3, 174,160,3,16, 174,173,8,3, #32
+	tres:   .word 166,160,8,3, 174,160,3,16, 166,175,11,3, 166,167,8,3, #48
+	quatro: .word 166,160,3,8, 174,160,3,16, 166,167,11,3, #32
+	cinco:  .word 166,160,8,3, 166,160,3,8, 166,173,9,3, 166,167,8,3, 172,167,3,8 #64
+	seis:   .word 166,160,3,16, 166,160,10,3, 166,167,8,3, 166,173,11,3, 174,167,3,8 #64
+	setew:  .word 179,160,3,16, 172,160,8,3, #16
+	oito:   .word 170,160,3,16, 178,160,3,16, 170,160,8,3, 170,166,8,3, 170,173,8,3, #64
+	novew:   .word 178,160,3,16, 170,160,8,3, 170,166,8,3, 168,160,3,9 #48	
 	times: .word 1:20 #Tempos de movimento no jogo, 1=tiro,2=monstros,3=personagem,4-spawnMonstro
 	array_colisoes: .word 1:10
 	tipos_colisoes: .word 10:10	#1=colisao player,2 colisao tiro, 3-6 colisao mosntro
@@ -1396,8 +1407,400 @@ destroirMonstro:
 			jal destruindoMonstro
 		nDestroir4:
 		
+		jal aumentarScore
+		
 	j terminouVerificarTiro	#retorna para o fim do da função acima
 
+aumentarScore:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+
+		lw $15,scores+12
+		addi $15,$15,1
+		
+		blt $15,10,naoDezena
+			addi $15,$0,1
+			sw $15,scores+12
+						
+			lw $15,scores+8
+			addi $15,$15,1
+			sw $15,scores+8
+			j sairScore
+		naoDezena:		
+		sw $15,scores+12			
+		sairScore:
+		
+		jal montarScore
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4	
+	jr $ra
+
+limparScore:				
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+			
+		lw $15,apagarScores
+		lw $16,apagarScores+4
+		lw $17,apagarScores+8
+		lw $18,apagarScores+12
+		li $10,0x0000
+		jal quadrado
+
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4		
+	jr $ra
+
+montarScore:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		li $2,1
+		lw $4,scores+12
+		syscall
+		
+		jal limparScore
+						
+		li $22,0
+		li $20,0
+				
+		desenhar: bgt $20,60,nDesenhar
+			lw $15,scores($22)	
+			addi $15,$15,-1
+			
+			bne $15,0,notZero
+				jal desenharZero
+			notZero:
+			
+			bne $15,1,notUm
+				jal desenharUm
+			notUm:
+			
+			bne $15,2,notTwo
+				jal desenharDois
+			notTwo:
+			
+			bne $15,3,notTres
+				jal desenharTres
+			notTres:
+			
+			bne $15,4,notQuatro
+				jal desenharQuatro
+			notQuatro:
+			
+			bne $15,5,notCinco
+				jal desenharCinco
+			notCinco:
+			
+			bne $15,6,notSeis
+				jal desenharSeis
+			notSeis:
+			
+			bne $15,7,notSete
+				jal desenharSete
+			notSete:
+			
+			bne $15,8,notOito
+				jal desenharOito
+			notOito:
+			
+			bne $15,9,notNove
+				jal desenharNove
+			notNove:
+			
+			addi $20,$20,20
+			addi $22,$22,4
+			j desenhar
+		nDesenhar:
+		
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4	
+	jr $ra
+
+desenharZero:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dZero:bgt $21,48,ndZero	
+			lw $15,zero($21)
+			add $15,$15,$20
+			lw $16,zero+4($21)
+			lw $17,zero+8($21)
+			lw $18,zero+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dZero
+		ndZero:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4	
+	jr $ra
+	
+desenharUm:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dUm:bgt $21,0,ndUm	
+			lw $15,um($21)
+			add $15,$15,$20
+			lw $16,um+4($21)
+			lw $17,um+8($21)
+			lw $18,um+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dUm
+		ndUm:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+
+	jr $ra
+
+desenharDois:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dDois:bgt $21,32,ndDois	
+			lw $15,dois($21)
+			add $15,$15,$20
+			lw $16,dois+4($21)
+			lw $17,dois+8($21)
+			lw $18,dois+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dDois
+		ndDois:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharTres:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dTres:bgt $21,48,ndTres	
+			lw $15,tres($21)
+			add $15,$15,$20
+			lw $16,tres+4($21)
+			lw $17,tres+8($21)
+			lw $18,tres+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dTres
+		ndTres:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharQuatro:	
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dQuatro:bgt $21,32,ndQuatro	
+			lw $15,quatro($21)
+			add $15,$15,$20
+			lw $16,quatro+4($21)
+			lw $17,quatro+8($21)
+			lw $18,quatro+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dQuatro
+		ndQuatro:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4		
+	jr $ra
+	
+desenharCinco:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dCinco:bgt $21,64,ndCinco	
+			lw $15,cinco($21)
+			add $15,$15,$20
+			lw $16,cinco+4($21)
+			lw $17,cinco+8($21)
+			lw $18,cinco+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dCinco
+		ndCinco:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharSeis:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dSeis:bgt $21,64,ndSeis	
+			lw $15,seis($21)
+			add $15,$15,$20
+			lw $16,seis+4($21)
+			lw $17,seis+8($21)
+			lw $18,seis+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dSeis
+		ndSeis:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharSete:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dSete:bgt $21,16,ndSete	
+			lw $15,setew($21)
+			add $15,$15,$20
+			lw $16,setew+4($21)
+			lw $17,setew+8($21)
+			lw $18,setew+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dSete
+		ndSete:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharOito:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dOito:bgt $21,64,ndOito	
+			lw $15,oito($21)
+			add $15,$15,$20
+			lw $16,oito+4($21)
+			lw $17,oito+8($21)
+			lw $18,oito+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dOito
+		ndOito:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+desenharNove:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $15, ($sp)
+		
+		li $21,0
+		dNove:bgt $21,48,ndNove	
+			lw $15,novew($21)
+			add $15,$15,$20
+			lw $16,novew+4($21)
+			lw $17,novew+8($21)
+			lw $18,novew+12($21)
+			li $10,0xffffff
+			jal quadrado
+		
+			addi $21,$21,16		
+			j dNove
+		ndNove:
+		
+		lw $15, ($sp)
+		addi $sp,$sp,4
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+																																																																																																																														
 #Destroi o monstro especificado na função acima
 destruindoMonstro:		
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
