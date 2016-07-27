@@ -1,6 +1,4 @@
 .data	
-	newLine: .asciiz " "
-	newBreal: .asciiz "\n"
 	scores: .word 1:4
 	apagarScores: .word 166,160,80,20	
 	zero:   .word 166,160,3,16, 166,160,13,3, 179,160,3,16, 166,172,13,4, #48
@@ -1520,10 +1518,6 @@ montarScore:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
 		sw $ra, ($sp)
 		
-		li $2,1
-		lw $4,scores+12
-		syscall
-		
 		jal limparScore
 						
 		li $22,0
@@ -2180,6 +2174,8 @@ cenario:
 		#Reseta o contador
 		addi $8,$0,0
 		
+		jal montarScore
+		
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
@@ -2202,124 +2198,3 @@ mudarPosicaoArrayMonstro:
 		sairChange:
 				
 	jr $ra
-imprimirShapesMonster:
-		addi $sp,$sp,-4 #tiramos o espaço de memoria
-		sw $8, ($sp)
-		
-		addi $sp,$sp,-4 #tiramos o espaço de memoria
-		sw $4, ($sp)
-		
-		li $8,0	
-		
-		changee:bgt $8,48,sairChangee
-			
-			lw $4,array_shapes_monster($8)
-				li $2,1
-				syscall
-				
-				li $2,4
-				la $4,newLine
-				syscall
-				
-			lw $4,array_shapes_monster+4($8)
-				li $2,1
-				syscall
-				
-				li $2,4
-				la $4,newLine
-				syscall
-				
-			lw $4,array_shapes_monster+8($8)
-				li $2,1
-				syscall
-				
-				li $2,4
-				la $4,newLine
-				syscall
-			lw $4,array_shapes_monster+12($8)
-				li $2,1
-				syscall
-				
-				li $2,4
-				la $4,newBreal
-				syscall
-			
-			addi $8,$8,16
-			j changee
-		sairChangee:
-		
-		#recupera o que esta na memoria
-		lw $4, ($sp)
-		addi $sp,$sp,4
-		
-		#recupera o que esta na memoria
-		lw $8, ($sp)
-		addi $sp,$sp,4		
-	jr $ra
-	
-imprimirColisoes:
-		li $15,0
-		de: bgt $15,20,nd			
-			li $2,1
-			lw $4,tipos_colisoes($15)
-			syscall
-			
-			li $2,4
-			la $4,newLine
-			syscall
-			
-			addi $15,$15,4
-			j de
-		nd:
-		
-		li $2,4
-		la $4,newBreal
-		syscall
-		
-	jr $ra	
-
-imprimirArrayMonstros:
-	addi $sp,$sp,-4 #tiramos o espaço de memoria
-	sw $8, ($sp)
-		
-	addi $sp,$sp,-4 #tiramos o espaço de memoria
-	sw $11, ($sp)
-
-	li $11,0
-	li $8,0
-	
-	AtualizarMonstrot:bgt $8,2688,sairAtualizarMonstrot
-			
-			add $11,$0,$8
-			addi $10,$11,892
-			
-			i: bgt $11,$10,ni						
-				
-				lw $4,array_monstros($11)
-				li $2,1
-				syscall
-				
-				li $2,4
-				la $4,newLine
-				syscall
-				
-				add $11,$11,4
-				j i
-			ni:
-			
-			li $2,4
-			la $4,newBreal
-			syscall
-			
-			add $8,$8,896	#incrementa
-			j AtualizarMonstrot			
-	sairAtualizarMonstrot:
-	
-	#recupera o que esta na memoria
-	lw $11, ($sp)
-	addi $sp,$sp,4
-		
-	#recupera o que esta na memoria
-	lw $8, ($sp)
-	addi $sp,$sp,4	
-jr $ra
