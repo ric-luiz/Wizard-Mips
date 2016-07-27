@@ -20,7 +20,7 @@
 	#Arrays referente aos monstros do jogo
 	qtd_monstro: .word 1,	#Quantidade de monstros no mapa
 	array_monstros: .word 1:900, #no maximo 4 monstros no mapa(com as posicoes:R,L,U,D)
-	array_shapes_monster: .word 1:32, #são 4 monstro, por isso 16 numeros alocados
+	array_shapes_monster: .word 1:16, #são 4 monstro, por isso 16 numeros alocados
 	posicao_monstros: .word 1:10 # 1-right,2-left,3-up,4-down. O ultimo numero corresponde a em qual index inserir
 	shape_monster: .word 12,36,16,16,
 	colisoes_monstros: .word 2:8,
@@ -402,7 +402,13 @@ player:
 		lw $18,shape_player+12
 		
 		jal movePlayer
-				
+		
+		#Verifica se aconteceu alguma colisão entre os monstros e algum tiro
+		lw $27,times
+		bne $27,0,naoVerificarColisaoMonstroPlayer
+			jal colidiuMonstro
+		naoVerificarColisaoMonstroPlayer:
+						
 		#recupera o que esta na memoria
 		lw $ra, ($sp)
 		addi $sp,$sp,4
@@ -850,6 +856,46 @@ colisaoGeral:
 		addi $sp,$sp,4
 	jr $ra
 
+#verifica se o player colidiu com algum mosntro
+colidiuMonstro:
+	#array_shapes_monster
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		lw $15,shape_player
+		lw $16,shape_player+4
+		lw $17,shape_player+8
+		lw $18,shape_player+12
+		
+		jal alimentarArrayColisaoA #Insere no array de colisões os elementos do quadrado a
+		li $8,0
+		li $13,0
+		li $14,0
+		#Pega as posições dos quadrados das shapes dos monstros
+		colisaoMonstro: bgt $8,48,sairColisaoMonstro
+			#Recupera os dados da memoria	
+			lw $21,array_shapes_monster($8)
+			lw $22,array_shapes_monster+4($8)
+			lw $23,array_shapes_monster+8($8)
+			lw $24,array_shapes_monster+12($8)		
+				
+			jal alimentarArrayColisaob #Insere no array de colisões os elementos do quadrado b
+			jal VerificarColidiu	#verifica se colidiu com os elementos do cenario
+			
+			lw $13,tipos_colisoes($14)			
+			bne $13,1,notColidiuMonstro
+				j end
+			notColidiuMonstro:
+									
+			addi $8,$8,16
+			j colisaoMonstro
+		sairColisaoMonstro:				
+		
+		add $8,$0,$0 #Reset no contador
+		
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
 #Verifica se colidiu com o cenario. Espera que os reg [15-18] estejam preenchidos com os dados corretos
 colidiuCenario:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
