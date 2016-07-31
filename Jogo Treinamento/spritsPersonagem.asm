@@ -70,21 +70,117 @@
 .text
 main:
 	#Recupera os dados da memoria
+	li $20,2
 	montar:bgt $8,160,sairmontar	
-		lw $15,player_down($8)
-		lw $16,player_down+4($8)
-		lw $17,player_down+8($8)
-		lw $18,player_down+12($8)
-		li $10,0xff00
+		lw $15,player_right($8)
+		lw $16,player_right+4($8)
+		lw $17,player_right+8($8)
+		lw $18,player_right+12($8)
+		li $10,0xff00				
+		
+		jal alterarPernaPlayerRight
+		
 		jal desenharQuadrado
 		
 		addi $8,$8,16
+		li $20,2
 		j montar
 	sairmontar:
 						
 end: li $2,10
      syscall
-     
+
+alterarPernaPlayerRight:
+    
+    	bne $8,112,naoAlternarP1R
+			add $15,$15,$20
+		naoAlternarP1R:
+		
+		bne $8,128,naoAlternarP2R
+			addi $20,$20,2
+			add $15,$15,$20
+		naoAlternarP2R:
+		
+		bne $8,144,naoAlternarP3R
+			sub $15,$15,$20
+			sub $17,$17,$20
+		naoAlternarP3R:
+		
+		bne $8,160,naoAlternarP4R
+			addi $20,$20,2
+			sub $15,$15,$20
+		naoAlternarP4R:
+               
+	jr $ra
+	
+alterarPernaPlayerLeft:
+    
+    	bne $8,112,naoAlternarP1L
+    		sub $15,$15,$20			
+		naoAlternarP1L:
+		
+		bne $8,128,naoAlternarP2L
+			addi $20,$20,2
+			sub $15,$15,$20
+		naoAlternarP2L:
+		
+		bne $8,144,naoAlternarP3L
+			addi $20,$20,2
+			add $15,$15,$20
+		naoAlternarP3L:
+		
+		bne $8,160,naoAlternarP4L
+			addi $20,$20,2
+			add $15,$15,$20			
+		naoAlternarP4L:               
+	jr $ra
+
+alterarPernaPlayerUp:
+    
+    	bne $8,112,naoAlternarP1U
+    		addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP1U:
+		
+		bne $8,128,naoAlternarP2U
+			addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP2U:
+		
+		bne $8,144,naoAlternarP3U
+			sub $16,$16,$20
+			sub $18,$18,$20
+		naoAlternarP3U:
+		
+		bne $8,160,naoAlternarP4U
+			sub $16,$16,$20
+		naoAlternarP4U:
+               
+	jr $ra
+
+alterarPernaPlayerDown:    
+    	bne $8,112,naoAlternarP1D
+    		addi $20,$20,2
+			sub $16,$16,$20
+		naoAlternarP1D:
+		
+		bne $8,128,naoAlternarP2D
+
+			sub $16,$16,$20
+			sub $18,$18,$20
+		naoAlternarP2D:
+		
+		bne $8,144,naoAlternarP3D
+			addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP3D:
+		
+		bne $8,160,naoAlternarP4D
+			add $16,$16,$20
+		naoAlternarP4D:
+               
+	jr $ra
+				
 desenharQuadrado:
 	addi $sp,$sp,-4 #tiramos o espaço de memoria
 	sw $ra, ($sp)	

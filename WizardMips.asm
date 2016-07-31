@@ -1,9 +1,15 @@
-.data	
+.data
+	fim: .word  #Letra F
+				70,60,5,60, 70,60,30,5, 70,80,20,5, 
+				#Letra I
+				110,60,5,60, 
+				#Letra M
+				125,60,5,60, 125,60,60,5, 153,60,5,50, 180,60,5,60	
 	scores: .word 1:4
 	apagarScores: .word 166,160,80,20	
 	zero:   .word 166,160,3,16, 166,160,13,3, 179,160,3,16, 166,172,13,4, #48
 	um:     .word 174,160,3,16, #0
-	dois:   .word 166,160,8,3, 174,160,3,16, 174,173,8,3, #32
+	dois:   .word 166,160,8,3, 172,160,3,8, 166,168,9,3, 166,168,3,6, 166,174,9,3, #64
 	tres:   .word 166,160,8,3, 174,160,3,16, 166,175,11,3, 166,167,8,3, #48
 	quatro: .word 166,160,3,8, 174,160,3,16, 166,167,11,3, #32
 	cinco:  .word 166,160,8,3, 166,160,3,8, 166,173,9,3, 166,167,8,3, 172,167,3,8 #64
@@ -108,6 +114,7 @@
 	#Arrays Referentes ao jogador	
 	posicao_player: .word 3,	# 1-right,2-left,3-up,4-down
 	aportou_tecla: .word 1,
+	movimentarPlayer: .word 1,
 	shape_player: .word 120,120,16,16, #Possui a seguinte ordem: x,y,width,height
 	array_player: .word #Player Right || 0-160(posição na memoria)
 						#Head				  	              
@@ -420,7 +427,10 @@ desenharPlayer:
 			lw $15,array_player($8)
 			lw $16,array_player+4($8)
 			lw $17,array_player+8($8)
-			lw $18,array_player+12($8)			
+			lw $18,array_player+12($8)	
+			
+			jal mudarPosicaoFootPlayer
+							
 			jal quadrado
 		
 			addi $8,$8,16
@@ -467,6 +477,9 @@ movePlayer:
 				#Redesenha na nova posição
 				li $8,176
 				li $25,336
+				#faz o switch do array de movimentação do jogador
+				li $21,176				
+				jal switchMovePlayer								
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer								
 		naoA:
@@ -496,6 +509,9 @@ movePlayer:
 				#Redesenha na nova posição
 				li $8,0
 				li $25,160
+				#faz o switch do array de movimentação do jogador
+				li $21,0				
+				jal switchMovePlayer
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer
 		naoD:
@@ -525,6 +541,9 @@ movePlayer:
 				#Redesenha na nova posição
 				li $8,352
 				li $25,512
+				#faz o switch do array de movimentação do jogador
+				li $21,352				
+				jal switchMovePlayer
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer
 		naoW:		
@@ -554,6 +573,9 @@ movePlayer:
 				#Redesenha na nova posição
 				li $8,528
 				li $25,688
+				#faz o switch do array de movimentação do jogador
+				li $21,528				
+				jal switchMovePlayer
 				li $10,0xff00	#Cor para do personagem
 				jal desenharPlayer							
 		naoS:
@@ -604,6 +626,160 @@ moveVertical:
 				j montarMoverVertical
 			sairMontarMoverVertical:					
 	jr $ra	
+#Seta no array de pode mudar pernas do personagem
+switchMovePlayer:
+	
+		lw $22,movimentarPlayer
+		bne $22,2,aindaNao1
+			li $22,1
+			sw $22,movimentarPlayer
+			j exit
+		aindaNao1:
+		li $22,2
+		sw $22,movimentarPlayer
+	
+	exit:jr $ra
+
+#Faz A mudança das pernas do player para paracer que ele esta andando, somente se for a hora de mudar
+mudarPosicaoFootPlayer:
+		addi $sp,$sp,-4 #tiramos o espaço de memoria
+		sw $ra, ($sp)
+		
+		#verifica se esta na hora de mudar
+		lw $22,movimentarPlayer
+		beq $22,1,sairMudar
+		
+		
+		li $20,2
+		
+		bne $21,0,naoEsse1	#Left
+			jal alterarPernaPlayerRight
+		naoEsse1:
+						
+		bne $21,176,naoEsse2	#Right
+			jal alterarPernaPlayerLeft
+		naoEsse2:
+		
+		bne $21,352,naoEsse3	#up
+			jal alterarPernaPlayerUp
+		naoEsse3:
+		
+		bne $21,528,naoEsse4	#up
+			jal alterarPernaPlayerDown
+		naoEsse4:
+		
+		sairMudar:
+		#recupera o que esta na memoria
+		lw $ra, ($sp)
+		addi $sp,$sp,4
+	jr $ra
+
+alterarPernaPlayerRight:    	
+		
+    	addi $22,$21,112    	
+    	bne $8,$22,naoAlternarP1R
+			add $15,$15,$20
+		naoAlternarP1R:
+		
+		addi $22,$21,128
+		bne $8,$22,naoAlternarP2R
+			addi $20,$20,2
+			add $15,$15,$20
+		naoAlternarP2R:
+		
+		addi $22,$21,144
+		bne $8,$22,naoAlternarP3R
+			sub $15,$15,$20
+			sub $17,$17,$20
+		naoAlternarP3R:
+		
+		addi $22,$21,160
+		bne $8,$22,naoAlternarP4R
+			addi $20,$20,2
+			sub $15,$15,$20
+		naoAlternarP4R:
+               
+	jr $ra
+	
+alterarPernaPlayerLeft:    	    	    	
+    	
+    	addi $22,$21,112
+    	bne $8,$22,naoAlternarP1L
+    		sub $15,$15,$20			
+		naoAlternarP1L:
+		
+		addi $22,$21,128
+		bne $8,$22,naoAlternarP2L
+			addi $20,$20,2
+			sub $15,$15,$20
+		naoAlternarP2L:
+		
+		addi $22,$21,144
+		bne $8,$22,naoAlternarP3L
+			addi $20,$20,2
+			add $15,$15,$20
+		naoAlternarP3L:
+		
+		addi $22,$21,160
+		bne $8,$22,naoAlternarP4L
+			addi $20,$20,2
+			add $15,$15,$20			
+		naoAlternarP4L:               
+	jr $ra
+
+alterarPernaPlayerUp:
+    	
+    	addi $22,$21,112
+    	bne $8,$22,naoAlternarP1U
+    		addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP1U:
+		
+		addi $22,$21,128
+		bne $8,$22,naoAlternarP2U
+			addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP2U:
+		
+		addi $22,$21,144
+		bne $8,$22,naoAlternarP3U
+			sub $16,$16,$20
+			sub $18,$18,$20
+		naoAlternarP3U:
+		
+		addi $22,$21,160
+		bne $8,$22,naoAlternarP4U
+			sub $16,$16,$20
+		naoAlternarP4U:
+               
+	jr $ra
+
+alterarPernaPlayerDown: 
+
+   		addi $22,$21,112   
+    	bne $8,$22,naoAlternarP1D
+    		addi $20,$20,2
+			sub $16,$16,$20
+		naoAlternarP1D:
+		
+		addi $22,$21,128
+		bne $8,$22,naoAlternarP2D
+			sub $16,$16,$20
+			sub $18,$18,$20
+		naoAlternarP2D:
+		
+		addi $22,$21,144
+		bne $8,$22,naoAlternarP3D
+			addi $20,$20,2
+			add $16,$16,$20
+		naoAlternarP3D:
+		
+		addi $22,$21,160
+		bne $8,$22,naoAlternarP4D
+			add $16,$16,$20
+		naoAlternarP4D:
+               
+	jr $ra
 
 tiroJogador:
 		addi $sp,$sp,-4 #tiramos o espaço de memoria
@@ -899,7 +1075,7 @@ colidiuMonstro:
 			
 			lw $13,tipos_colisoes($14)			
 			bne $13,1,notColidiuMonstro
-				j end
+				j telaFim
 			notColidiuMonstro:
 									
 			addi $8,$8,16
@@ -1642,7 +1818,7 @@ desenharDois:
 		sw $15, ($sp)
 		
 		li $21,0
-		dDois:bgt $21,32,ndDois	
+		dDois:bgt $21,64,ndDois	
 			lw $15,dois($21)
 			add $15,$15,$20
 			lw $16,dois+4($21)
@@ -2198,3 +2374,30 @@ mudarPosicaoArrayMonstro:
 		sairChange:
 				
 	jr $ra
+#desenha a tela para finalizar o jogo	
+telaFim:		
+	
+	#da aquela ultima limpada na tela
+	li $15,1
+	li $16,1
+	li $17,256
+	li $18,256
+	li $10,0x0000
+	jal quadrado
+	
+	jal montarScore
+	
+	li $8,0
+	montarFim:bgt $8,112,sairMontarFim	
+			lw $15,fim($8)
+			lw $16,fim+4($8)
+			lw $17,fim+8($8)
+			lw $18,fim+12($8)
+			li $10,0xff0000
+			jal quadrado
+		
+			addi $8,$8,16		
+			j montarFim
+		sairMontarFim:
+
+	j end

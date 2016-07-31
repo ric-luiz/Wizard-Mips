@@ -84,14 +84,15 @@ main:
 	#Recupera os dados da memoria	
 	
 	montar:bgt $8,208,sairmontar	
-		lw $15,monster_right($8)
-		lw $16,monster_right+4($8)
-		lw $17,monster_right+8($8)
-		lw $18,monster_right+12($8)
+		lw $15,monster_down($8)
+		lw $16,monster_down+4($8)
+		lw $17,monster_down+8($8)
+		lw $18,monster_down+12($8)
 		li $10,0xffffff		
 		
-		addi $15,$15,216
-		addi $16,$16,100
+		li $20,2
+		jal alterarPernaMonsterUpDown
+				
 		jal desenharQuadrado
 		
 		addi $8,$8,16
@@ -100,7 +101,48 @@ main:
 						
 end: li $2,10
      syscall
-     
+
+
+alterarPernaMonsterRightLeft:
+    
+    	bne $8,112,naoAlternarP1RL
+			add $15,$15,$20
+		naoAlternarP1RL:
+		
+		bne $8,128,naoAlternarP2RL			
+			add $15,$15,$20
+		naoAlternarP2RL:
+		
+		bne $8,144,naoAlternarP3RL
+			sub $15,$15,$20
+		naoAlternarP3RL:
+		
+		bne $8,160,naoAlternarP4RL		
+			sub $15,$15,$20
+		naoAlternarP4RL:
+               
+	jr $ra
+
+alterarPernaMonsterUpDown:
+    
+    	bne $8,112,naoAlternarP1UD
+			add $16,$16,$20
+		naoAlternarP1UD:
+		
+		bne $8,128,naoAlternarP2UD
+			add $16,$16,$20
+		naoAlternarP2UD:
+		
+		bne $8,144,naoAlternarP3UD
+			sub $16,$16,$20
+		naoAlternarP3UD:
+		
+		bne $8,160,naoAlternarP4UD
+			sub $16,$16,$20
+		naoAlternarP4UD:
+               
+	jr $ra
+
 desenharQuadrado:
 	addi $sp,$sp,-4 #tiramos o espaço de memoria
 	sw $ra, ($sp)	
